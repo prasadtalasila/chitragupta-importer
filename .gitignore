@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local settings for scripts/rc-daemon.sh (copied from rc-daemon.env.example)
+scripts/rc-daemon.env
