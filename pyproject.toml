@@ -1,0 +1,35 @@
+[project]
+name = "chitragupta-importer"
+version = "0.1.0"
+description = "Import reference-manager libraries into the papers/ directory chitragupta reads."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Prasad Talasila" }]
+requires-python = ">=3.12"
+dependencies = ["click>=8.2"]
+
+[project.scripts]
+chitragupta-importer = "chitragupta_importer.__main__:main"
+
+[dependency-groups]
+dev = ["pytest", "pytest-cov", "ruff", "pylint"]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+# Specs and plans quote code as it was proposed; they are records, not source.
+extend-exclude = ["docs/superpowers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "BLE", "RUF100"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["chitragupta_importer"]

@@ -1,8 +1,32 @@
 # chitragupta-importer
 
-Supplies papers and a BibTeX file to
-[chitragupta](https://github.com/prasadtalasila/chitragupta).
-It will be packaged with Poetry and distributed as a wheel.
+Reads a reference manager's library (its database and attachment
+storage) and writes one consistent `papers/` directory for
+[chitragupta](https://github.com/prasadtalasila/chitragupta). chitragupta
+reads only that directory and never learns the importer exists.
+Zotero is the first supported reference manager.
+
+```text
+papers/
+├── bibliography.bib      one entry per item that has a PDF
+├── citekeys.lock         item id -> citekey; a written key never changes
+└── files/
+    └── <citekey>.pdf
+```
+
+**Status:** repository scaffold only. The Zotero import is designed in
+[docs/superpowers/specs/2026-11-13-zotero-importer-design.md](docs/superpowers/specs/2026-11-13-zotero-importer-design.md).
+
+## Install and develop
+
+The project is managed with [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync
+uv run chitragupta-importer --version
+```
+
+Test, lint and build commands are in [PROJECT.md](PROJECT.md).
 
 ## Remote Control daemon
 
