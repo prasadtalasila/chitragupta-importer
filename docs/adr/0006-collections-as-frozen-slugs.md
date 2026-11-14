@@ -1,7 +1,7 @@
 # Collections reach chitragupta as frozen slug paths in `cg-collections`
 
 Each collection gets a segment slug (lower-case `[a-z0-9-]`) frozen per
-collection id in `papers/collections.lock`; a collection's slug path joins
+collection ID in `papers/collections.lock`; a collection's slug path joins
 segments from the root with `.`, and each entry lists its slug paths in a
 `cg-collections` field. A rename in the reference manager therefore changes
 no slug, so drafts that recorded a collection scope keep working; a move

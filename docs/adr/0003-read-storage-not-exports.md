@@ -2,7 +2,7 @@
 
 The importer opens `zotero.sqlite` read-only (and later each manager's own
 store) rather than parsing a `.bib` export or calling an API. Only the
-storage has stable item ids, collection ids and hierarchy, and attachment
+storage has stable item IDs, collection IDs and hierarchy, and attachment
 paths together: Zotero's own export drops collections and builds citekeys at
 export time; Better BibTeX's keys differ from the ones drafts cite and its
 exports in the reference library carry no `file` fields; the local and web

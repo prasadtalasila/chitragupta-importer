@@ -36,7 +36,7 @@ first source; Mendeley and others follow with the same output.
 3. **Citekeys are created by the importer and never change** once
    written. The keys drafts already cite, from the existing
    `bibliography-groups.bib`, are frozen exactly as spelled.
-4. Export only items that have a PDF; leave out and list the rest.
+4. Include only items that have a PDF; leave out and list the rest.
 5. Running twice on an unchanged library gives byte-identical output.
    Adding a paper changes only that paper's lines.
 6. Carry collection membership, with its hierarchy, into each entry
@@ -115,7 +115,7 @@ citekeys.lock ──────────────────────
 ```
 
 - **Source reader** (`sources/zotero.py`): turns the database into
-  plain `Item` records: source id, item type, fields, creators, PDF
+  plain `Item` records: item ID, item type, fields, creators, PDF
   attachments (absolute paths in `storage/`), collection memberships.
   Skips items in `deletedItems` and collections in
   `deletedCollections`. A later source adds a sibling module producing
@@ -135,23 +135,23 @@ citekeys.lock ──────────────────────
   (copy to a temp file first, or `immutable=1`), as long as the
   original is never opened writable.
 
-### Source ids
+### Item IDs and collection IDs
 
 `zotero:<library>/<itemKey>`, where `<library>` is `user` for the
 personal library and `group-<groupID>` for a group library, because an
-8-character key is unique only within one library. My call: export the
+8-character key is unique only within one library. My call: import the
 personal library only in this version and list group libraries as
 skipped (the reference library has none).
 
 ### Citekeys
 
-Stored in `papers/citekeys.lock`: one line per item ever exported,
-`<source id>\t<citekey>`, sorted by source id, UTF-8, LF.
+Stored in `papers/citekeys.lock`: one line per item ever included,
+`<item ID>\t<citekey>`, sorted by item ID, UTF-8, LF.
 
 Rules, in order:
 
-1. A source id in the lock keeps its key. Always.
-2. A source id not in the lock gets a new key from the key rule.
+1. An item ID in the lock keeps its key. Always.
+2. An item ID not in the lock gets a new key from the key rule.
 3. A key in the lock is never given to another item, even after its
    item is deleted or loses its PDF. Lines are never removed.
    A paper deleted from Zotero and added again has a new item key, so
@@ -160,7 +160,7 @@ Rules, in order:
 4. A new key that clashes takes the next free suffix, Zotero's habit
    and the shape of the frozen keys: the first item keeps the bare key,
    the next gets `-1`, then `-2`, skipping any spelling already in the
-   lock. Within one run, items are taken in order of source id, so the
+   lock. Within one run, items are taken in order of item ID, so the
    result does not depend on database row order. Assigned once, then
    frozen by rule 1. (My call.)
 5. Every key, new or frozen, must pass chitragupta's `citekey_safety`
@@ -186,7 +186,7 @@ those matches before assigning anything new.
   (497 of 498 match in the reference data), then DOI, then URL, then
   normalised title.
 - Only matched entries whose item has a valid PDF get a lock line.
-  The rest (146 in the reference data) get none and are not exported;
+  The rest (146 in the reference data) get none and are not included;
   an item that gains a PDF later gets a new key from the rule.
 - An entry matching no item, or more than one, is listed and gets no
   lock line. An item claimed by two entries is an error; the run stops.
@@ -197,13 +197,13 @@ those matches before assigning anything new.
 - Overrides issue #1, which had the person type keys into Zotero's
   Citation Key field.
 
-### Which items are exported
+### Which items are included
 
 - Only items with at least one PDF attachment (content type
   `application/pdf`, or a `.pdf` file name) that exists on disk.
 - Every left-out item is reported with its reason: no attachment, no
   PDF attachment, PDF missing on disk. The run still succeeds.
-- Several PDFs: hash each PDF's file name with SHA-256, export the one
+- Several PDFs: hash each PDF's file name with SHA-256, import the one
   with the lowest hash; tie on equal names broken by full path.
 - The PDF is copied to `papers/files/<citekey>.pdf`, replaced only if
   its content changed. Files in `papers/files/` the run did not write
@@ -211,7 +211,7 @@ those matches before assigning anything new.
 
 ### The bib entry
 
-- One entry per exported item, ordered by citekey; fields in a fixed
+- One entry per included item, ordered by citekey; fields in a fixed
   order; one formatting style; UTF-8, LF.
 - Entry types and fields mapped from Zotero's item types and fields the
   way Zotero's built-in BibTeX translator maps them, so that for frozen
@@ -255,7 +255,7 @@ recorded in `papers/collections.lock`; it never changes afterwards.
   collection carries no meaning of its own the way a citekey's paper
   does. (My call.)
 
-**`papers/collections.lock`.** One line per collection ever exported,
+**`papers/collections.lock`.** One line per collection ever imported,
 sorted by collection id, UTF-8, LF, tab-separated:
 
 ```text
@@ -278,7 +278,7 @@ cg-collections = {digital-twin.dt-architectures, digital-twin.dt-platforms.execu
 ```
 
 **The name table.** At the top of `bibliography.bib`, one comment block
-lists every collection an exported item is in, and all their ancestors,
+lists every collection an included item is in, and all their ancestors,
 sorted by slug path; each row is the slug path, a tab, and the
 collection's **own** name only (full display paths are rebuilt from the
 parent rows, so names are never split and need no separator escaping):
@@ -327,7 +327,7 @@ chitragupta-importer zotero --data-dir <Zotero dir> --out <papers dir>
 
 `--data-dir` holds `zotero.sqlite` and `storage/`. Exit 0 on success,
 nonzero on refusal (unknown schema, ambiguous bootstrap, bootstrap with
-an existing lock, unsafe new key). A summary goes to stdout: exported,
+an existing lock, unsafe new key). A summary goes to stdout: included,
 left out by reason, new keys, collections new, renamed, moved and
 retired, unreferenced files.
 
