@@ -28,16 +28,19 @@ first source; Mendeley and others follow with the same output.
 
 1. Read a Zotero library (`zotero.sqlite` and its `storage/`)
    read-only.
-2. Write `papers/bibliography.bib`, `papers/files/<citekey>.pdf` and a
-   citekey index, `papers/citekeys.lock`.
+2. Write `papers/bibliography.bib`, `papers/files/<citekey>.pdf`, a
+   citekey index `papers/citekeys.lock` and a collection index
+   `papers/collections.lock`. The two locks are the importer's own
+   records; chitragupta reads neither.
 3. **Citekeys are created by the importer and never change** once
    written. The keys drafts already cite, from the existing
    `bibliography-groups.bib`, are frozen exactly as spelled.
 4. Export only items that have a PDF; leave out and list the rest.
 5. Running twice on an unchanged library gives byte-identical output.
    Adding a paper changes only that paper's lines.
-6. Carry collection membership into each entry (format: see
-   [Collections](#collections-deferred)).
+6. Carry collection membership, with its hierarchy, into each entry
+   as frozen slugs in a `cg-collections` field (see
+   [Collections](#collections)).
 
 ## Non-goals
 
@@ -45,9 +48,10 @@ first source; Mendeley and others follow with the same output.
 - Sources other than Zotero in this version.
 - Annotations (377 in the reference library), notes, HTML snapshots and
   other non-PDF attachments.
-- Reading chitragupta's ledger, drafts or `content/`. Naming drafts
-  that cite a changed key is chitragupta's job (its `sync` reads the
-  lock).
+- Reading chitragupta's ledger, drafts or `content/`. Detecting a
+  changed key is chitragupta's job, from its own ledger (same
+  `pdf_hash`, new citekey); it does not read `citekeys.lock`.
+- Writing the `groups` field or staying compatible with it.
 - A runtime dependency on chitragupta.
 
 ## Anti-goals
@@ -67,9 +71,9 @@ The importer fails its purpose, even if every test passes, if:
   PDF that exists.
 - Every attachment path must resolve inside the bib's directory, or
   chitragupta refuses the entry and exits nonzero.
-- `groups` is read by `chitragupta/bib_collections.py`: a plain
-  `split(",")`, then `>` for nesting, whitespace normalised. It has no
-  escape handling.
+- chitragupta reads only `bibliography.bib` and the PDFs. Collection
+  membership needs a chitragupta change to read `cg-collections` (see
+  [Collections](#collections)); today it reads `groups`.
 
 ## Reference data
 
@@ -211,34 +215,107 @@ those matches before assigning anything new.
 - Entry types and fields mapped from Zotero's item types and fields the
   way Zotero's built-in BibTeX translator maps them, so that for frozen
   entries the output matches `bibliography-groups.bib` field for field,
-  except `file` and anything the translator does at random. The builder
+  except `file`, `groups` (replaced by `cg-collections`) and anything
+  the translator does at random. The builder
   measures and reports the remaining differences.
 - `file = {Full Text PDF:files/<citekey>.pdf:application/pdf}`, escaped
   per `bib_escapes.py`.
 
-### Collections (deferred)
+### Collections
 
-The format needs its own design, coming after this document is
-approved. Until then the builder writes `groups` the way chitragupta
-reads it today: full paths from the root, ` > ` between levels, `, `
-between paths, sorted. That is safe on the reference data because no
-name contains `,` or `>`; a name that does stops the run with a
-message.
+A reference manager's folders (Zotero: collections, JabRef: groups,
+Mendeley: folders) reach chitragupta through one importer-owned field,
+`cg-collections`, plus a name table in the bib. chitragupta parses both
+from `bibliography.bib` and reads no lock file. The importer does not
+write the `groups` field; backward compatibility with it is out of
+scope.
 
-Inputs to that later design, from a survey of Zotero, JabRef, Mendeley,
-EndNote, BibDesk and Citavi:
+**Slugs.** Each collection has a *segment slug*: its name lower-cased,
+ASCII-folded, every run of characters outside `[a-z0-9]` replaced by
+one `-`, leading and trailing `-` trimmed (`collection` if nothing is
+left). `Industry 5.0` becomes `industry-5-0`. A collection's *slug
+path* joins the segment slugs from the root with `.`:
+`digital-twin.dt-platforms.execution.runner`. Slugs contain only
+`[a-z0-9-.]`, so they need no escaping and no shell quoting.
 
-- Every one lets an item be in many collections; Zotero, JabRef,
-  Mendeley and Citavi nest without limit, EndNote two levels, BibDesk
-  none.
-- Almost none put hierarchy in BibTeX; JabRef's own `groups` field
-  means leaf names plus a `jabref-meta` tree, so our paths read as odd
-  flat groups in JabRef.
-- Names are not identities (duplicates, renames); every source has
-  stable collection ids.
-- Candidate: an `@comment{chitragupta-collections: …}` tree with stable
-  ids, plus paths per entry; escaping needs a matching chitragupta
-  change.
+**Freezing.** A segment slug is created once per collection id and
+recorded in `papers/collections.lock`; it never changes afterwards.
+
+- **Rename** in the reference manager: the slug stays, only the name in
+  the lock and the name table changes. Filters and drafts using the slug
+  keep working.
+- **Move** to another parent: the segment slug stays, the slug path
+  changes to follow the new parent (the collection really moved).
+- **Sibling clash** (two children of one parent with the same segment
+  slug, including names differing only by case): the second, in order
+  of collection id, gets `-1`, the next `-2`, assigned once and frozen.
+- **Delete, then re-create** with the same name under the same parent:
+  the new collection may take the retired segment slug, since a
+  collection carries no meaning of its own the way a citekey's paper
+  does. (My call.)
+
+**`papers/collections.lock`.** One line per collection ever exported,
+sorted by collection id, UTF-8, LF, tab-separated:
+
+```text
+<collection id>\t<parent collection id or ->\t<segment slug>\t<name>\t<live|retired>
+zotero:user/47U7HA7G\t-\tdigital-twin\tDigital Twin\tlive
+zotero:user/EQ853ET5\tzotero:user/<DT Platforms id>\tperformance-measurements\tPerformance Measurements\tlive
+```
+
+Each run compares the library with the lock and reports, per
+collection: `new`, `renamed <old name> -> <new name>`,
+`moved <old slug path> -> <new slug path>`, `retired`. Lines are never
+removed; a deleted collection's line is marked `retired`.
+
+**The entry field.** `cg-collections` lists the slug path of every
+collection the item is directly in, sorted, joined by `, `. Ancestors
+are implied and not listed (an item in `a.b.c` is in `a` and `a.b`).
+
+```bibtex
+cg-collections = {digital-twin.dt-architectures, digital-twin.dt-platforms.execution.runner}
+```
+
+**The name table.** At the top of `bibliography.bib`, one comment block
+lists every collection an exported item is in, and all their ancestors,
+sorted by slug path; each row is the slug path, a tab, and the
+collection's **own** name only (full display paths are rebuilt from the
+parent rows, so names are never split and need no separator escaping):
+
+```bibtex
+@comment{cg-collections v1
+digital-twin	Digital Twin
+digital-twin.dt-platforms	DT Platforms
+digital-twin.dt-platforms.execution	Execution
+digital-twin.dt-platforms.execution.runner	Runner
+}
+```
+
+In a name, a tab or newline becomes a space and `{`, `}` are written
+`\{`, `\}` so the block's braces stay balanced. The table carries no
+collection ids; those stay in the lock. (Name table in the bib rather
+than a sidecar: my call, so chitragupta reads only the bib.)
+
+**Reference data.** 108 collections, depth up to 4, 99 distinct names
+ignoring case; 7 names reused in different branches (`Medical`,
+`Standards`, `Performance Measurements`, ...), which the slug paths keep
+apart. One item sits in 4 collections. No name contains a tab, newline
+or brace.
+
+**chitragupta's side** (a separate chitragupta issue, not this
+package): parse `cg-collections` and the `cg-collections v1` table in
+`bib_reader`; `ledger --collections` prints slug path, display path and
+count; `--collection` accepts a slug path or a display path and
+resolves the latter through the table; the collection-scoping reference
+records the slug path in `scope.md`; drop the `groups` reading.
+
+Background, from a survey of Zotero, JabRef, Mendeley, EndNote, BibDesk
+and Citavi: every one lets an item be in many collections; Zotero,
+JabRef, Mendeley and Citavi nest without limit, EndNote two levels,
+BibDesk none; almost none put hierarchy in BibTeX; every one has stable
+collection ids. `cg-` namespaces the field because `collection` already
+names BibTeX and biblatex entry types (`@incollection`, `@collection`)
+and CSL's series variables.
 
 ### CLI
 
@@ -249,14 +326,15 @@ chitragupta-importer zotero --data-dir <Zotero dir> --out <papers dir>
 
 `--data-dir` holds `zotero.sqlite` and `storage/`. Exit 0 on success,
 nonzero on refusal (unknown schema, ambiguous bootstrap, bootstrap with
-an existing lock, unsafe new key, collection name with a separator). A summary goes to stdout: exported,
-left out by reason, new keys, unreferenced files.
+an existing lock, unsafe new key). A summary goes to stdout: exported,
+left out by reason, new keys, collections new, renamed, moved and
+retired, unreferenced files.
 
 ### Writes
 
 Each output file is written to a temp file in `papers/` and renamed,
-so an interrupted run leaves the old file intact. The lock is written
-last.
+so an interrupted run leaves the old file intact. The two locks are
+written last.
 
 ## Testing
 
@@ -264,6 +342,8 @@ last.
   the real schema (no private library data in the repository).
 - Determinism: run twice, compare bytes; add an item, compare diffs.
 - Key freezing: delete and re-add, rename, title change, clash.
+- Collection slugs: rename, move, sibling clash (including case-only),
+  delete and re-create, a name with `/`, `.`, `{` or a tab.
 - Reference-data checks (run by hand, not in CI, since the data is
   private): bootstrap match counts, key-rule match rate, field diff
   against `bibliography-groups.bib`.
@@ -279,7 +359,6 @@ last.
 
 ## Open, to settle later
 
-- The collections format (above).
 - The CI round trip through `python -m chitragupta.corpus sync` that
   issue #1 asks for: there are no workflows yet (part A copies
   templates only).
