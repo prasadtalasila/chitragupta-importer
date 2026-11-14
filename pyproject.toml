@@ -21,6 +21,11 @@ build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 100
+# Specs and plans quote code as it was proposed; they are records, not source.
+extend-exclude = ["docs/superpowers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "BLE", "RUF100"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

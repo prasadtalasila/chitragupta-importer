@@ -1,0 +1,50 @@
+# Adapted from chitragupta's .pylintrc: its chitragupta-specific module
+# list and names are gone, and the two size rules it delegates to its own
+# scan test are enforced here by pylint instead (AGENTS.md: functions
+# under 25 lines, files under 250 lines).
+
+[MASTER]
+fail-under=10.0
+ignore-patterns=^\.#
+jobs=1
+persistent=yes
+py-version=3.12
+
+[MESSAGES CONTROL]
+disable=raw-checker-failed,
+        bad-inline-option,
+        locally-disabled,
+        file-ignored,
+        suppressed-message,
+        useless-suppression,
+        deprecated-pragma,
+        use-symbolic-message-instead,
+        import-outside-toplevel,
+        missing-function-docstring,
+        missing-class-docstring,
+        too-few-public-methods,
+        duplicate-code,
+        redefined-outer-name
+
+[REPORTS]
+reports=no
+score=yes
+
+[BASIC]
+good-names=i,j,k,ex,_
+no-docstring-rgx=^_
+
+[FORMAT]
+max-line-length=100
+max-module-lines=250
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+
+[DESIGN]
+max-statements=25
+max-args=5
+max-locals=15
+max-branches=12
+max-returns=6
+
+[MISCELLANEOUS]
+notes=FIXME,XXX,TODO
