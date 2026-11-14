@@ -2,7 +2,8 @@
 
 Status: draft for approval. Part (B) of two; builds on the scaffold in
 [2026-11-13-repo-scaffold-design.md](2026-11-13-repo-scaffold-design.md).
-Refines GitHub issue #1, and overrides it where noted.
+Refines GitHub issue #1, and overrides it where noted. The reasons
+behind its hard-to-reverse choices are recorded in `docs/adr/`.
 
 ## Intent and the why
 
@@ -155,7 +156,7 @@ Rules, in order:
    item is deleted or loses its PDF. Lines are never removed.
    A paper deleted from Zotero and added again has a new item key, so
    it gets a new citekey; the old one stays retired. Matching it back
-   to its old key is tracked as a separate issue.
+   to its old key is tracked in issue #4.
 4. A new key that clashes takes the next free suffix, Zotero's habit
    and the shape of the frozen keys: the first item keeps the bare key,
    the next gets `-1`, then `-2`, skipping any spelling already in the
