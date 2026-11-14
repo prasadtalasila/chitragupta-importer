@@ -13,7 +13,6 @@ def test_version_matches_metadata():
     result = CliRunner().invoke(main, ["--version"])
     assert result.exit_code == 0
     assert version("chitragupta-importer") in result.output
-    assert version("chitragupta-importer") == "0.1.0"
 
 
 def test_no_arguments_prints_help():
@@ -28,4 +27,4 @@ def test_module_entry_point():
         text=True,
         check=True,
     )
-    assert "0.1.0" in done.stdout
+    assert version("chitragupta-importer") in done.stdout
