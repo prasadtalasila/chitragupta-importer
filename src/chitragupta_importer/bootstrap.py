@@ -5,6 +5,7 @@ PDF content hash, DOI, URL and title; the first level with any match decides.
 """
 
 import re
+from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from hashlib import sha256
@@ -113,6 +114,9 @@ def _read_entries(existing: Path) -> list[dict[str, str]]:
 
 
 def _refusals(matches: list[tuple[str, set[str]]], claims: dict[str, list[str]]) -> Iterable[str]:
+    counts = Counter(citekey for citekey, _ in matches)
+    for citekey in sorted(c for c, n in counts.items() if n > 1):
+        yield f"duplicate citekey {citekey} in existing bibliography"
     ambiguous = sorted(citekey for citekey, found in matches if len(found) > 1)
     if ambiguous:
         yield f"ambiguous entries, each matching several items: {', '.join(ambiguous)}"

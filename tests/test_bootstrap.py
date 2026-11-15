@@ -156,3 +156,21 @@ def test_unsafe_unmatched_key_is_only_listed(tmp_path):
     library = library_of(tmp_path, ("AAAA1111", {"title": "Twin"}, [("a.pdf", PDF)]))
     bib = existing_bib(tmp_path, entry("a:b", title="Other"))
     assert bootstrap(bib, library).unmatched == ("a:b",)
+
+
+def test_duplicate_citekey_refuses(tmp_path):
+    library = library_of(
+        tmp_path,
+        ("AAAA1111", {"title": "One"}, [("a.pdf", b"%PDF a")]),
+        ("BBBB2222", {"title": "Two"}, [("b.pdf", b"%PDF b")]),
+    )
+    bib = existing_bib(tmp_path, entry("k1", title="One") + entry("k1", title="Two"))
+    with pytest.raises(BootstrapRefused, match="duplicate citekey k1 in existing bibliography"):
+        bootstrap(bib, library)
+
+
+def test_duplicate_citekey_refuses_when_one_entry_is_unmatched(tmp_path):
+    library = library_of(tmp_path, ("AAAA1111", {"title": "One"}, [("a.pdf", PDF)]))
+    bib = existing_bib(tmp_path, entry("k1", title="One") + entry("k1", title="Other"))
+    with pytest.raises(BootstrapRefused, match="duplicate citekey k1"):
+        bootstrap(bib, library)
