@@ -2,7 +2,8 @@
 
 Status: draft for approval. Part (B) of two; builds on the scaffold in
 [2026-11-13-repo-scaffold-design.md](2026-11-13-repo-scaffold-design.md).
-Refines GitHub issue #1, and overrides it where noted.
+Refines GitHub issue #1, and overrides it where noted. The reasons
+behind its hard-to-reverse choices are recorded in `docs/adr/`.
 
 ## Intent and the why
 
@@ -12,7 +13,7 @@ directory out of a reference manager is today a manual Zotero export
 with two defects:
 
 - **Unstable citekeys.** Zotero stores no citation key (0 of 644 items
-  in the reference library have one) and builds keys at export time.
+  in the Zotero data have one) and builds keys at export time.
   86 keys carry an order-dependent `-1` suffix, so a later export can
   swap two papers' keys under drafts that cite them.
 - **Lost collections.** Zotero's own exporter drops collection
@@ -28,26 +29,30 @@ first source; Mendeley and others follow with the same output.
 
 1. Read a Zotero library (`zotero.sqlite` and its `storage/`)
    read-only.
-2. Write `papers/bibliography.bib`, `papers/files/<citekey>.pdf` and a
-   citekey index, `papers/citekeys.lock`.
+2. Write `papers/bibliography.bib`, `papers/files/<citekey>.pdf`, a
+   citekey index `papers/citekeys.lock` and a collection index
+   `papers/collections.lock`. The two locks are the importer's own
+   records; chitragupta reads neither.
 3. **Citekeys are created by the importer and never change** once
    written. The keys drafts already cite, from the existing
    `bibliography-groups.bib`, are frozen exactly as spelled.
-4. Export only items that have a PDF; leave out and list the rest.
+4. Include only items that have a PDF; leave out and list the rest.
 5. Running twice on an unchanged library gives byte-identical output.
    Adding a paper changes only that paper's lines.
-6. Carry collection membership into each entry (format: see
-   [Collections](#collections-deferred)).
+6. Carry collection membership, with its hierarchy, into each entry
+   as frozen slugs in a `cg-collections` field (see
+   [Collections](#collections)).
 
 ## Non-goals
 
 - Writing to `zotero.sqlite` or any Zotero file. Ever.
 - Sources other than Zotero in this version.
-- Annotations (377 in the reference library), notes, HTML snapshots and
+- Annotations (377 in the Zotero data), notes, HTML snapshots and
   other non-PDF attachments.
-- Reading chitragupta's ledger, drafts or `content/`. Naming drafts
-  that cite a changed key is chitragupta's job (its `sync` reads the
-  lock).
+- Reading chitragupta's ledger, drafts or `content/`. Detecting a
+  changed key is chitragupta's job, from its own ledger (same
+  `pdf_hash`, new citekey); it does not read `citekeys.lock`.
+- Writing the `groups` field or staying compatible with it.
 - A runtime dependency on chitragupta.
 
 ## Anti-goals
@@ -65,15 +70,17 @@ The importer fails its purpose, even if every test passes, if:
 - `file = {Desc:path:mimetype}`, `;`-separated, with `\:` and `\;`
   escapes (`chitragupta/bib_escapes.py`). chitragupta takes the first
   PDF that exists.
-- Every attachment path must resolve inside the bib's directory, or
+- Every attachment path must resolve inside the bibliography's directory, or
   chitragupta refuses the entry and exits nonzero.
-- `groups` is read by `chitragupta/bib_collections.py`: a plain
-  `split(",")`, then `>` for nesting, whitespace normalised. It has no
-  escape handling.
+- chitragupta reads only `bibliography.bib` and the PDFs. Collection
+  membership needs a chitragupta change to read `cg-collections` (see
+  [Collections](#collections)); today it reads `groups`.
 
-## Reference data
+## The Zotero data
 
-`/workspace/papers` holds the library this is designed against:
+The design is measured on one real Zotero data directory and the
+exports beside it, at `/workspace/papers` (private; never in the
+repository):
 
 | What | Count |
 | --- | --- |
@@ -93,7 +100,7 @@ The importer fails its purpose, even if every test passes, if:
 | Approach | Verdict |
 | --- | --- |
 | **Read `zotero.sqlite` directly, read-only** | Picked (issue #1). The only source with stable item ids, collections and attachment paths together. Cost: Zotero's schema has no compatibility promise, handled by refusing unknown schema versions. |
-| Parse Zotero's or Better BibTeX's `.bib` exports | Rejected. Neither has stable ids; the built-in export drops collections; Better BibTeX keys differ from the frozen ones and its exports in the reference data carry no `file` fields. |
+| Parse Zotero's or Better BibTeX's `.bib` exports | Rejected. Neither has stable ids; the built-in export drops collections; Better BibTeX keys differ from the frozen ones and its exports in the Zotero data carry no `file` fields. |
 | Zotero's local or web API | Rejected. Needs Zotero running or network and credentials, for no gain over the database. |
 
 ## Design
@@ -110,14 +117,14 @@ citekeys.lock ──────────────────────
 ```
 
 - **Source reader** (`sources/zotero.py`): turns the database into
-  plain `Item` records: source id, item type, fields, creators, PDF
+  plain `Item` records: item ID, item type, fields, creators, PDF
   attachments (absolute paths in `storage/`), collection memberships.
   Skips items in `deletedItems` and collections in
   `deletedCollections`. A later source adds a sibling module producing
   the same records; no plugin machinery is built now.
 - **Key assignment** (`keys.py`): reads the lock, freezes known keys,
   creates keys for new items.
-- **Writer** (`bib.py`, `files.py`): writes the bib, copies PDFs,
+- **Writer** (`bib.py`, `files.py`): writes the bibliography, copies PDFs,
   writes the lock.
 
 ### Opening the database
@@ -130,58 +137,60 @@ citekeys.lock ──────────────────────
   (copy to a temp file first, or `immutable=1`), as long as the
   original is never opened writable.
 
-### Source ids
+### Item IDs and collection IDs
 
 `zotero:<library>/<itemKey>`, where `<library>` is `user` for the
 personal library and `group-<groupID>` for a group library, because an
-8-character key is unique only within one library. My call: export the
-personal library only in this version and list group libraries as
-skipped (the reference library has none).
+8-character key is unique only within one library. An import run reads
+exactly one library: in this version, the Zotero personal library;
+group libraries are listed as skipped (the Zotero data has none).
 
 ### Citekeys
 
-Stored in `papers/citekeys.lock`: one line per item ever exported,
-`<source id>\t<citekey>`, sorted by source id, UTF-8, LF.
+Stored in `papers/citekeys.lock`: one line per item ever included,
+`<item ID>\t<citekey>`, sorted by item ID, UTF-8, LF.
 
 Rules, in order:
 
-1. A source id in the lock keeps its key. Always.
-2. A source id not in the lock gets a new key from the key rule.
+1. An item ID in the lock keeps its key. Always.
+2. An item ID not in the lock gets a new key from the key rule.
 3. A key in the lock is never given to another item, even after its
-   item is deleted or loses its PDF. Lines are never removed.
+   item is deleted or loses its PDF. Lines are never removed. An item
+   that loses its PDF keeps its key while left out (a dormant citekey)
+   and gets the same key back when it is included again.
    A paper deleted from Zotero and added again has a new item key, so
    it gets a new citekey; the old one stays retired. Matching it back
-   to its old key is tracked as a separate issue.
+   to its old key is tracked in issue #4.
 4. A new key that clashes takes the next free suffix, Zotero's habit
    and the shape of the frozen keys: the first item keeps the bare key,
    the next gets `-1`, then `-2`, skipping any spelling already in the
-   lock. Within one run, items are taken in order of source id, so the
+   lock. Within one run, items are taken in order of item ID, so the
    result does not depend on database row order. Assigned once, then
    frozen by rule 1. (My call.)
 5. Every key, new or frozen, must pass chitragupta's `citekey_safety`
    rule, because the key also names `files/<citekey>.pdf`. (Copy the
    rule, ~30 lines, per issue #1.) An unsafe new key stops the run,
    naming the item; an unsafe frozen key stops bootstrap, so it is
-   fixed in the bib and drafts before the first import. 0 of 644
-   frozen keys in the reference data fail it.
+   fixed in the bibliography and drafts before the first import. 0 of 644
+   frozen keys in the Zotero data fail it.
 
 **Key rule for new items** (my call, to keep the format consistent with
 the frozen keys): the shape Zotero's built-in exporter uses,
 `<first creator's last name>_<first significant title word>_<year>`,
 lower case, ASCII-folded, `noauthor` and `nodate` when missing. The
 builder pins the exact normalisation by making the rule reproduce the
-frozen keys of the reference data (ignoring `-N` suffixes) and reports
+frozen keys of the Zotero data (ignoring `-N` suffixes) and reports
 the match rate; it should be close to 100%.
 
 **Bootstrap** (first run, no lock yet, `--bootstrap <bib>`): match each
-entry of the existing bib to a Zotero item, then write the lock from
+entry of the existing bibliography to a Zotero item, then write the lock from
 those matches before assigning anything new.
 
 - Match by content hash of the entry's PDF against `storage/` first
-  (497 of 498 match in the reference data), then DOI, then URL, then
+  (497 of 498 match in the Zotero data), then DOI, then URL, then
   normalised title.
 - Only matched entries whose item has a valid PDF get a lock line.
-  The rest (146 in the reference data) get none and are not exported;
+  The rest (146 in the Zotero data) get none and are not included;
   an item that gains a PDF later gets a new key from the rule.
 - An entry matching no item, or more than one, is listed and gets no
   lock line. An item claimed by two entries is an error; the run stops.
@@ -192,53 +201,128 @@ those matches before assigning anything new.
 - Overrides issue #1, which had the person type keys into Zotero's
   Citation Key field.
 
-### Which items are exported
+### Which items are included
 
 - Only items with at least one PDF attachment (content type
   `application/pdf`, or a `.pdf` file name) that exists on disk.
 - Every left-out item is reported with its reason: no attachment, no
   PDF attachment, PDF missing on disk. The run still succeeds.
-- Several PDFs: hash each PDF's file name with SHA-256, export the one
+- Several PDFs: hash each PDF's file name with SHA-256, import the one
   with the lowest hash; tie on equal names broken by full path.
 - The PDF is copied to `papers/files/<citekey>.pdf`, replaced only if
   its content changed. Files in `papers/files/` the run did not write
   are reported, not deleted.
 
-### The bib entry
+### The bibliography entry
 
-- One entry per exported item, ordered by citekey; fields in a fixed
+- One entry per included item, ordered by citekey; fields in a fixed
   order; one formatting style; UTF-8, LF.
 - Entry types and fields mapped from Zotero's item types and fields the
   way Zotero's built-in BibTeX translator maps them, so that for frozen
   entries the output matches `bibliography-groups.bib` field for field,
-  except `file` and anything the translator does at random. The builder
+  except `file`, `groups` (replaced by `cg-collections`) and anything
+  the translator does at random. The builder
   measures and reports the remaining differences.
 - `file = {Full Text PDF:files/<citekey>.pdf:application/pdf}`, escaped
   per `bib_escapes.py`.
 
-### Collections (deferred)
+### Collections
 
-The format needs its own design, coming after this document is
-approved. Until then the builder writes `groups` the way chitragupta
-reads it today: full paths from the root, ` > ` between levels, `, `
-between paths, sorted. That is safe on the reference data because no
-name contains `,` or `>`; a name that does stops the run with a
-message.
+A reference manager's folders (Zotero: collections, JabRef: groups,
+Mendeley: folders) reach chitragupta through one importer-owned field,
+`cg-collections`, plus a name table in the bib. chitragupta parses both
+from `bibliography.bib` and reads no lock file. The importer does not
+write the `groups` field; backward compatibility with it is out of
+scope.
 
-Inputs to that later design, from a survey of Zotero, JabRef, Mendeley,
-EndNote, BibDesk and Citavi:
+**Slugs.** Each collection has a *segment slug*: its name lower-cased,
+ASCII-folded, every run of characters outside `[a-z0-9]` replaced by
+one `-`, leading and trailing `-` trimmed (`collection` if nothing is
+left). `Industry 5.0` becomes `industry-5-0`. A collection's *slug
+path* joins the segment slugs from the root with `.`:
+`digital-twin.dt-platforms.execution.runner`. Slugs contain only
+`[a-z0-9-.]`, so they need no escaping and no shell quoting.
 
-- Every one lets an item be in many collections; Zotero, JabRef,
-  Mendeley and Citavi nest without limit, EndNote two levels, BibDesk
-  none.
-- Almost none put hierarchy in BibTeX; JabRef's own `groups` field
-  means leaf names plus a `jabref-meta` tree, so our paths read as odd
-  flat groups in JabRef.
-- Names are not identities (duplicates, renames); every source has
-  stable collection ids.
-- Candidate: an `@comment{chitragupta-collections: …}` tree with stable
-  ids, plus paths per entry; escaping needs a matching chitragupta
-  change.
+**Freezing.** A segment slug is created once per collection id and
+recorded in `papers/collections.lock`; it never changes afterwards.
+
+- **Rename** in the reference manager: the slug stays, only the name in
+  the lock and the name table changes. Filters and drafts using the slug
+  keep working.
+- **Move** to another parent: the segment slug stays, the slug path
+  changes to follow the new parent (the collection really moved).
+- **Sibling clash** (two children of one parent with the same segment
+  slug, including names differing only by case): the second, in order
+  of collection id, gets `-1`, the next `-2`, assigned once and frozen.
+- **Delete, then re-create** with the same name under the same parent:
+  the new collection may take the retired segment slug, since a
+  collection carries no meaning of its own the way a citekey's paper
+  does. (My call.)
+
+**`papers/collections.lock`.** One line per collection that has held
+an included item in some import run (a collection holding only
+left-out items gets no line, and no slug, until then),
+sorted by collection id, UTF-8, LF, tab-separated:
+
+```text
+<collection id>\t<parent collection id or ->\t<segment slug>\t<name>\t<live|retired>
+zotero:user/47U7HA7G\t-\tdigital-twin\tDigital Twin\tlive
+zotero:user/EQ853ET5\tzotero:user/<DT Platforms id>\tperformance-measurements\tPerformance Measurements\tlive
+```
+
+Each run compares the library with the lock and reports, per
+collection: `new`, `renamed <old name> -> <new name>`,
+`moved <old slug path> -> <new slug path>`, `retired`. Lines are never
+removed; a deleted collection's line is marked `retired`.
+
+**The entry field.** `cg-collections` lists the slug path of every
+collection the item is directly in, sorted, joined by `, `. Ancestors
+are implied and not listed (an item in `a.b.c` is in `a` and `a.b`).
+
+```bibtex
+cg-collections = {digital-twin.dt-architectures, digital-twin.dt-platforms.execution.runner}
+```
+
+**The name table.** At the top of `bibliography.bib`, one comment block
+lists every collection an included item is in, and all their ancestors,
+sorted by slug path; each row is the slug path, a tab, and the
+collection's **own** name only (full display paths are rebuilt from the
+parent rows, so names are never split and need no separator escaping):
+
+```bibtex
+@comment{cg-collections v1
+digital-twin	Digital Twin
+digital-twin.dt-platforms	DT Platforms
+digital-twin.dt-platforms.execution	Execution
+digital-twin.dt-platforms.execution.runner	Runner
+}
+```
+
+In a name, a tab or newline becomes a space and `{`, `}` are written
+`\{`, `\}` so the block's braces stay balanced. The table carries no
+collection ids; those stay in the lock. (Name table in the bibliography rather
+than a sidecar: my call, so chitragupta reads only the bib.)
+
+**In the Zotero data.** 108 collections, depth up to 4, 99 distinct names
+ignoring case; 7 names reused in different branches (`Medical`,
+`Standards`, `Performance Measurements`, ...), which the slug paths keep
+apart. One item sits in 4 collections. No name contains a tab, newline
+or brace.
+
+**chitragupta's side** (a separate chitragupta issue, not this
+package): parse `cg-collections` and the `cg-collections v1` table in
+`bib_reader`; `ledger --collections` prints slug path, display path and
+count; `--collection` accepts a slug path or a display path and
+resolves the latter through the table; the collection-scoping reference
+records the slug path in `scope.md`; drop the `groups` reading.
+
+Background, from a survey of Zotero, JabRef, Mendeley, EndNote, BibDesk
+and Citavi: every one lets an item be in many collections; Zotero,
+JabRef, Mendeley and Citavi nest without limit, EndNote two levels,
+BibDesk none; almost none put hierarchy in BibTeX; every one has stable
+collection ids. `cg-` namespaces the field because `collection` already
+names BibTeX and biblatex entry types (`@incollection`, `@collection`)
+and CSL's series variables.
 
 ### CLI
 
@@ -249,14 +333,15 @@ chitragupta-importer zotero --data-dir <Zotero dir> --out <papers dir>
 
 `--data-dir` holds `zotero.sqlite` and `storage/`. Exit 0 on success,
 nonzero on refusal (unknown schema, ambiguous bootstrap, bootstrap with
-an existing lock, unsafe new key, collection name with a separator). A summary goes to stdout: exported,
-left out by reason, new keys, unreferenced files.
+an existing lock, unsafe new key). A summary goes to stdout: included,
+left out by reason, new keys, collections new, renamed, moved and
+retired, unreferenced files.
 
 ### Writes
 
 Each output file is written to a temp file in `papers/` and renamed,
-so an interrupted run leaves the old file intact. The lock is written
-last.
+so an interrupted run leaves the old file intact. The two locks are
+written last.
 
 ## Testing
 
@@ -264,7 +349,9 @@ last.
   the real schema (no private library data in the repository).
 - Determinism: run twice, compare bytes; add an item, compare diffs.
 - Key freezing: delete and re-add, rename, title change, clash.
-- Reference-data checks (run by hand, not in CI, since the data is
+- Collection slugs: rename, move, sibling clash (including case-only),
+  delete and re-create, a name with `/`, `.`, `{` or a tab.
+- Checks against the Zotero data (run by hand, not in CI, since the data is
   private): bootstrap match counts, key-rule match rate, field diff
   against `bibliography-groups.bib`.
 - Coverage 100% line and branch, as issue #1 asks.
@@ -279,7 +366,11 @@ last.
 
 ## Open, to settle later
 
-- The collections format (above).
+- Duplicate items across libraries: the same paper kept in two
+  libraries (two reference managers, or a Zotero personal and group
+  library) is two items and would become two entries. To settle when a
+  second library is read.
+
 - The CI round trip through `python -m chitragupta.corpus sync` that
   issue #1 asks for: there are no workflows yet (part A copies
   templates only).
