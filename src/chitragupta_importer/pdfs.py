@@ -15,7 +15,8 @@ class LeftOutReason(StrEnum):
     PDF_MISSING_ON_DISK = "PDF missing on disk"
 
 
-def _is_pdf(attachment: Attachment) -> bool:
+def is_pdf(attachment: Attachment) -> bool:
+    """Whether the attachment is a PDF, by content type or `.pdf` file name."""
     return attachment.content_type == "application/pdf" or (
         attachment.file_name.lower().endswith(".pdf")
     )
@@ -29,7 +30,7 @@ def main_pdf(item: Item) -> Path | LeftOutReason:
     """
     if not item.attachments:
         return LeftOutReason.NO_ATTACHMENT
-    pdfs = [attachment for attachment in item.attachments if _is_pdf(attachment)]
+    pdfs = [attachment for attachment in item.attachments if is_pdf(attachment)]
     if not pdfs:
         return LeftOutReason.NO_PDF_ATTACHMENT
     on_disk = [

@@ -7,7 +7,10 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Prasad Talasila" }]
 requires-python = ">=3.12"
-dependencies = ["click>=8.2"]
+dependencies = [
+    "bibtexparser>=1.4,<2",
+    "click>=8.2",
+]
 
 [project.scripts]
 chitragupta-importer = "chitragupta_importer.__main__:main"
