@@ -33,3 +33,6 @@ testpaths = ["tests"]
 [tool.coverage.run]
 branch = true
 source = ["chitragupta_importer"]
+
+[tool.coverage.report]
+fail_under = 98
