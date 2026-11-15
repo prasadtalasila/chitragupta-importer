@@ -141,9 +141,9 @@ citekeys.lock ──────────────────────
 
 `zotero:<library>/<itemKey>`, where `<library>` is `user` for the
 personal library and `group-<groupID>` for a group library, because an
-8-character key is unique only within one library. My call: import the
-personal library only in this version and list group libraries as
-skipped (the Zotero data has none).
+8-character key is unique only within one library. An import run reads
+exactly one library: in this version, the Zotero personal library;
+group libraries are listed as skipped (the Zotero data has none).
 
 ### Citekeys
 
@@ -155,7 +155,9 @@ Rules, in order:
 1. An item ID in the lock keeps its key. Always.
 2. An item ID not in the lock gets a new key from the key rule.
 3. A key in the lock is never given to another item, even after its
-   item is deleted or loses its PDF. Lines are never removed.
+   item is deleted or loses its PDF. Lines are never removed. An item
+   that loses its PDF keeps its key while left out (a dormant citekey)
+   and gets the same key back when it is included again.
    A paper deleted from Zotero and added again has a new item key, so
    it gets a new citekey; the old one stays retired. Matching it back
    to its old key is tracked in issue #4.
@@ -257,7 +259,9 @@ recorded in `papers/collections.lock`; it never changes afterwards.
   collection carries no meaning of its own the way a citekey's paper
   does. (My call.)
 
-**`papers/collections.lock`.** One line per collection ever imported,
+**`papers/collections.lock`.** One line per collection that has held
+an included item in some import run (a collection holding only
+left-out items gets no line, and no slug, until then),
 sorted by collection id, UTF-8, LF, tab-separated:
 
 ```text
@@ -361,6 +365,11 @@ written last.
   translator" rule.
 
 ## Open, to settle later
+
+- Duplicate items across libraries: the same paper kept in two
+  libraries (two reference managers, or a Zotero personal and group
+  library) is two items and would become two entries. To settle when a
+  second library is read.
 
 - The CI round trip through `python -m chitragupta.corpus sync` that
   issue #1 asks for: there are no workflows yet (part A copies

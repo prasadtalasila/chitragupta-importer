@@ -53,8 +53,8 @@ _Avoid_: primary PDF, full text
 ## Import
 
 **Import run**:
-One execution of the importer, reading a library and rewriting the papers
-directory.
+One execution of the importer, reading exactly one library and rewriting
+the papers directory.
 _Avoid_: export, sync
 
 **Included item**:
@@ -134,9 +134,9 @@ by `.`, such as `digital-twin.dt-platforms`.
 _Avoid_: collection path, group path
 
 **Collection lock**:
-The importer's permanent record of every collection it has seen, by
-collection ID, with its segment slug, parent and name, in
-`collections.lock`.
+The importer's permanent record of every collection that has held an
+included item, by collection ID, with its segment slug, parent and name,
+in `collections.lock`.
 _Avoid_: index, registry, mapping
 
 **Direct membership**:
@@ -170,6 +170,11 @@ library: its record is kept and it is never reused, except that a collection
 re-created under the same parent with the same name may take back its
 retired segment slug.
 _Avoid_: deleted, stale
+
+**Dormant citekey**:
+The citekey of an item that still exists but is currently left out; it
+is kept, not reused, and returns when the item is included again.
+_Avoid_: suspended, inactive
 
 **Rename**:
 A collection keeping its collection ID and parent but changing its name;
