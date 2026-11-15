@@ -13,7 +13,7 @@ directory out of a reference manager is today a manual Zotero export
 with two defects:
 
 - **Unstable citekeys.** Zotero stores no citation key (0 of 644 items
-  in the reference library have one) and builds keys at export time.
+  in the Zotero data have one) and builds keys at export time.
   86 keys carry an order-dependent `-1` suffix, so a later export can
   swap two papers' keys under drafts that cite them.
 - **Lost collections.** Zotero's own exporter drops collection
@@ -47,7 +47,7 @@ first source; Mendeley and others follow with the same output.
 
 - Writing to `zotero.sqlite` or any Zotero file. Ever.
 - Sources other than Zotero in this version.
-- Annotations (377 in the reference library), notes, HTML snapshots and
+- Annotations (377 in the Zotero data), notes, HTML snapshots and
   other non-PDF attachments.
 - Reading chitragupta's ledger, drafts or `content/`. Detecting a
   changed key is chitragupta's job, from its own ledger (same
@@ -70,15 +70,17 @@ The importer fails its purpose, even if every test passes, if:
 - `file = {Desc:path:mimetype}`, `;`-separated, with `\:` and `\;`
   escapes (`chitragupta/bib_escapes.py`). chitragupta takes the first
   PDF that exists.
-- Every attachment path must resolve inside the bib's directory, or
+- Every attachment path must resolve inside the bibliography's directory, or
   chitragupta refuses the entry and exits nonzero.
 - chitragupta reads only `bibliography.bib` and the PDFs. Collection
   membership needs a chitragupta change to read `cg-collections` (see
   [Collections](#collections)); today it reads `groups`.
 
-## Reference data
+## The Zotero data
 
-`/workspace/papers` holds the library this is designed against:
+The design is measured on one real Zotero data directory and the
+exports beside it, at `/workspace/papers` (private; never in the
+repository):
 
 | What | Count |
 | --- | --- |
@@ -98,7 +100,7 @@ The importer fails its purpose, even if every test passes, if:
 | Approach | Verdict |
 | --- | --- |
 | **Read `zotero.sqlite` directly, read-only** | Picked (issue #1). The only source with stable item ids, collections and attachment paths together. Cost: Zotero's schema has no compatibility promise, handled by refusing unknown schema versions. |
-| Parse Zotero's or Better BibTeX's `.bib` exports | Rejected. Neither has stable ids; the built-in export drops collections; Better BibTeX keys differ from the frozen ones and its exports in the reference data carry no `file` fields. |
+| Parse Zotero's or Better BibTeX's `.bib` exports | Rejected. Neither has stable ids; the built-in export drops collections; Better BibTeX keys differ from the frozen ones and its exports in the Zotero data carry no `file` fields. |
 | Zotero's local or web API | Rejected. Needs Zotero running or network and credentials, for no gain over the database. |
 
 ## Design
@@ -122,7 +124,7 @@ citekeys.lock ──────────────────────
   the same records; no plugin machinery is built now.
 - **Key assignment** (`keys.py`): reads the lock, freezes known keys,
   creates keys for new items.
-- **Writer** (`bib.py`, `files.py`): writes the bib, copies PDFs,
+- **Writer** (`bib.py`, `files.py`): writes the bibliography, copies PDFs,
   writes the lock.
 
 ### Opening the database
@@ -141,7 +143,7 @@ citekeys.lock ──────────────────────
 personal library and `group-<groupID>` for a group library, because an
 8-character key is unique only within one library. My call: import the
 personal library only in this version and list group libraries as
-skipped (the reference library has none).
+skipped (the Zotero data has none).
 
 ### Citekeys
 
@@ -167,26 +169,26 @@ Rules, in order:
    rule, because the key also names `files/<citekey>.pdf`. (Copy the
    rule, ~30 lines, per issue #1.) An unsafe new key stops the run,
    naming the item; an unsafe frozen key stops bootstrap, so it is
-   fixed in the bib and drafts before the first import. 0 of 644
-   frozen keys in the reference data fail it.
+   fixed in the bibliography and drafts before the first import. 0 of 644
+   frozen keys in the Zotero data fail it.
 
 **Key rule for new items** (my call, to keep the format consistent with
 the frozen keys): the shape Zotero's built-in exporter uses,
 `<first creator's last name>_<first significant title word>_<year>`,
 lower case, ASCII-folded, `noauthor` and `nodate` when missing. The
 builder pins the exact normalisation by making the rule reproduce the
-frozen keys of the reference data (ignoring `-N` suffixes) and reports
+frozen keys of the Zotero data (ignoring `-N` suffixes) and reports
 the match rate; it should be close to 100%.
 
 **Bootstrap** (first run, no lock yet, `--bootstrap <bib>`): match each
-entry of the existing bib to a Zotero item, then write the lock from
+entry of the existing bibliography to a Zotero item, then write the lock from
 those matches before assigning anything new.
 
 - Match by content hash of the entry's PDF against `storage/` first
-  (497 of 498 match in the reference data), then DOI, then URL, then
+  (497 of 498 match in the Zotero data), then DOI, then URL, then
   normalised title.
 - Only matched entries whose item has a valid PDF get a lock line.
-  The rest (146 in the reference data) get none and are not included;
+  The rest (146 in the Zotero data) get none and are not included;
   an item that gains a PDF later gets a new key from the rule.
 - An entry matching no item, or more than one, is listed and gets no
   lock line. An item claimed by two entries is an error; the run stops.
@@ -209,7 +211,7 @@ those matches before assigning anything new.
   its content changed. Files in `papers/files/` the run did not write
   are reported, not deleted.
 
-### The bib entry
+### The bibliography entry
 
 - One entry per included item, ordered by citekey; fields in a fixed
   order; one formatting style; UTF-8, LF.
@@ -294,10 +296,10 @@ digital-twin.dt-platforms.execution.runner	Runner
 
 In a name, a tab or newline becomes a space and `{`, `}` are written
 `\{`, `\}` so the block's braces stay balanced. The table carries no
-collection ids; those stay in the lock. (Name table in the bib rather
+collection ids; those stay in the lock. (Name table in the bibliography rather
 than a sidecar: my call, so chitragupta reads only the bib.)
 
-**Reference data.** 108 collections, depth up to 4, 99 distinct names
+**In the Zotero data.** 108 collections, depth up to 4, 99 distinct names
 ignoring case; 7 names reused in different branches (`Medical`,
 `Standards`, `Performance Measurements`, ...), which the slug paths keep
 apart. One item sits in 4 collections. No name contains a tab, newline
@@ -345,7 +347,7 @@ written last.
 - Key freezing: delete and re-add, rename, title change, clash.
 - Collection slugs: rename, move, sibling clash (including case-only),
   delete and re-create, a name with `/`, `.`, `{` or a tab.
-- Reference-data checks (run by hand, not in CI, since the data is
+- Checks against the Zotero data (run by hand, not in CI, since the data is
   private): bootstrap match counts, key-rule match rate, field diff
   against `bibliography-groups.bib`.
 - Coverage 100% line and branch, as issue #1 asks.

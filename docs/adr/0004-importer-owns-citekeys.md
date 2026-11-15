@@ -1,6 +1,6 @@
 # The importer creates citekeys and freezes them
 
-Zotero stores no citation key (0 of 644 items in the reference library) and
+Zotero stores no citation key (0 of 644 items in the Zotero data) and
 builds one at export time, so 86 keys carry an export-order `-1` suffix that
 a later export can move to another paper. The importer therefore assigns
 every key itself and records it in `papers/citekeys.lock` against the

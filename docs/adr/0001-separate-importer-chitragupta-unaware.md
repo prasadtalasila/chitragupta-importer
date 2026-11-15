@@ -1,4 +1,4 @@
-# Import lives in a separate package; chitragupta reads only the bib and PDFs
+# Import lives in a separate package; chitragupta reads only the bibliography and PDFs
 
 Reading a reference manager's storage moves out of chitragupta into this
 package, which writes a `papers/` directory (`bibliography.bib` plus

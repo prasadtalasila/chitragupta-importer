@@ -16,6 +16,11 @@ A named, nestable folder a person sorts items into inside a reference
 manager; an item can be in many.
 _Avoid_: group, folder, category, shelf
 
+**Data directory**:
+Where a reference manager keeps its own storage; for Zotero, the folder
+holding `zotero.sqlite` and `storage/`.
+_Avoid_: profile, database (for the whole folder)
+
 **Library**:
 One reference manager's set of items: a Zotero personal library, or one
 Zotero group library.
@@ -67,6 +72,14 @@ The directory the importer writes and chitragupta reads: the bibliography,
 the PDFs under `files/`, and the importer's two locks.
 _Avoid_: corpus, output folder, export
 
+**Bibliography**:
+The one BibTeX file the importer writes, `papers/bibliography.bib`.
+_Avoid_: bib, bib file, BibTeX file
+
+**Existing bibliography**:
+A bibliography written before the importer existed, read once by bootstrap
+for the citekeys drafts already cite.
+
 **Entry**:
 One record in the bibliography, made from one included item.
 _Avoid_: item, reference
@@ -81,6 +94,11 @@ the importer exists.
 The identifier an entry is cited by, which also names its PDF.
 _Avoid_: citation key, bibkey, key
 
+**Safe citekey**:
+A citekey with no character or form that cannot appear in a file name on
+Linux, macOS or Windows; every citekey must be safe.
+_Avoid_: valid citekey, legal citekey
+
 **Frozen citekey**:
 A citekey that, once written, never changes spelling and never moves to a
 different item.
@@ -94,6 +112,11 @@ with a clash suffix assigned once.
 The importer's permanent record of every citekey it has assigned, by item
 ID, in `citekeys.lock`.
 _Avoid_: index, registry, mapping
+
+**Clash suffix**:
+The `-N` added once to the second and later claimants of the same citekey,
+or of the same segment slug among siblings, and never changed afterwards.
+_Avoid_: disambiguator, counter
 
 **Bootstrap**:
 The one-time first import that freezes the citekeys drafts already cite,
@@ -116,9 +139,23 @@ collection ID, with its segment slug, parent and name, in
 `collections.lock`.
 _Avoid_: index, registry, mapping
 
+**Direct membership**:
+An item's placement in a collection, made by a person in the reference
+manager.
+
+**Implied membership**:
+An item's membership in every ancestor of a collection it is directly in;
+never written, always derived from slug paths.
+
+**Display path**:
+The names of a collection and its ancestors, from the root, joined by
+` / `, such as `Digital Twin / DT Platforms`; only shown or matched whole,
+never split back into names.
+_Avoid_: collection path, full name
+
 **`cg-collections`**:
-The bibliography field listing the slug paths of the collections an item is
-directly in.
+The bibliography field listing the slug paths of an item's direct
+memberships.
 _Avoid_: groups, collections
 
 **Name table**:
