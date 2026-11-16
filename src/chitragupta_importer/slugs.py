@@ -175,13 +175,16 @@ def update_collections(
     collection in `used` or already in the lock, and all their ancestors, gets a
     live record; a locked collection gone from the library is retired. Segment
     slugs never change, except that a moved or returning collection whose slug a
-    live sibling holds takes a clash suffix. New collections are taken in
-    collection-ID order.
+    live sibling holds takes a clash suffix. Gone collections are retired first,
+    so their slugs are free to re-created and moved collections in the same run.
+    New collections are taken in collection-ID order.
     """
     library = _library(collections)
     parents = {k: c.parent_id for k, c in library.items()}
     needed = _with_ancestors((set(used) | set(lock)) & set(library), parents)
     records = dict(lock)
+    for key in set(lock) - set(library):
+        records[key] = replace(lock[key], status="retired")
     relocated = []
     for key in sorted(needed & set(lock)):
         old, now = lock[key], library[key]
@@ -197,6 +200,4 @@ def update_collections(
         collection = library[key]
         slug = _new_slug(records, collection)
         records[key] = CollectionRecord(key, collection.parent_id, slug, collection.name, "live")
-    for key in set(lock) - set(library):
-        records[key] = replace(lock[key], status="retired")
     return records, _changes(lock, records)

@@ -209,7 +209,7 @@ def test_ancestors_of_live_records_are_recorded_after_a_move():
 
 
 def test_name_in_lock_has_no_tab_or_newline():
-    new, changes = update_collections({}, [coll("A", "a\tb\nc\rd")], {cid("A")})
+    new, _ = update_collections({}, [coll("A", "a\tb\nc\rd")], {cid("A")})
     assert new[cid("A")].name == "a b c d"
     again, changes = update_collections(new, [coll("A", "a\tb\nc\rd")], {cid("A")})
     assert again == new and not changes
