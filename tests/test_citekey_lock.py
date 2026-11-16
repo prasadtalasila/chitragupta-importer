@@ -73,3 +73,9 @@ def test_empty_lock_is_empty_text():
 
 def test_parse_ignores_blank_lines():
     assert parse_citekey_lock("\nz:1\tk1\n\n  \nz:2\tk2\n") == {"z:1": "k1", "z:2": "k2"}
+
+
+def test_parse_refuses_a_citekey_held_by_two_item_ids():
+    text = "zotero:user/A\tk\nzotero:user/B\tother\nzotero:user/C\tk\n"
+    with pytest.raises(ValueError, match="line 3: citekey 'k' is held by both zotero:user/A and"):
+        parse_citekey_lock(text)

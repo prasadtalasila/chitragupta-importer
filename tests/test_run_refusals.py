@@ -112,3 +112,37 @@ def test_pdf_destination_through_symlink_refused(tmp_path):
 def test_pdf_destination_inside_files(tmp_path):
     out = tmp_path / "out"
     assert pdf_destination(out, "k.pdf") == out / "files" / "k.pdf"
+
+
+def test_citekey_shared_by_two_item_ids_refused(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "citekeys.lock").write_text(
+        "zotero:user/AAAA1111\tk\nzotero:user/GONE0000\tk\n", encoding="utf-8"
+    )
+    before = snapshot(out)
+    with pytest.raises(
+        ImportRefused,
+        match=r"citekeys\.lock.*'k' is held by both zotero:user/AAAA1111 and zotero:user/GONE0000",
+    ):
+        import_zotero(build(tmp_path, RICHSTEIN, SMITH), out)
+    assert snapshot(out) == before
+
+
+@pytest.mark.parametrize("lock_name", ["citekeys.lock", "collections.lock"])
+def test_unreadable_lock_refused(tmp_path, lock_name):
+    out = tmp_path / "out"
+    (out / lock_name).mkdir(parents=True)
+    with pytest.raises(ImportRefused, match=lock_name):
+        import_zotero(build(tmp_path, RICHSTEIN), out)
+    assert [p.name for p in out.iterdir()] == [lock_name]
+
+
+def test_bootstrap_oserror_without_filename_shows_the_error(tmp_path, monkeypatch):
+    def fail(path):
+        raise OSError(f"device gone while reading {path.name}")
+
+    monkeypatch.setattr("chitragupta_importer.bootstrap._hash_file", fail)
+    with pytest.raises(ImportRefused, match="device gone while reading paper.pdf") as refused:
+        import_zotero(build(tmp_path, RICHSTEIN), tmp_path / "out", existing_bibliography(tmp_path))
+    assert "None" not in str(refused.value)

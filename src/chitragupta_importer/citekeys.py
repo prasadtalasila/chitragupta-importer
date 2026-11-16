@@ -70,11 +70,22 @@ def key_stem(item: Item) -> str:
 
 
 def parse_citekey_lock(text: str) -> dict[str, str]:
-    """Read citekey lock text (`<item ID>\\t<citekey>` lines) into item ID -> citekey."""
-    lock = {}
-    for line in text.splitlines():
+    """Read citekey lock text (`<item ID>\\t<citekey>` lines) into item ID -> citekey.
+
+    Raises ValueError for a line without a tab or a citekey held by two item IDs.
+    """
+    lock: dict[str, str] = {}
+    holders: dict[str, str] = {}
+    for number, line in enumerate(text.splitlines(), start=1):
         if line.strip():
-            item_id, citekey = line.split("\t", 1)
+            item_id, tab, citekey = line.partition("\t")
+            if not tab:
+                raise ValueError(f"line {number}: expected <item ID><tab><citekey>")
+            if holders.setdefault(citekey, item_id) != item_id:
+                raise ValueError(
+                    f"line {number}: citekey {citekey!r} is held by both "
+                    f"{holders[citekey]} and {item_id}"
+                )
             lock[item_id] = citekey
     return lock
 

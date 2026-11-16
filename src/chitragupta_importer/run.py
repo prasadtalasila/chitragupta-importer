@@ -69,8 +69,10 @@ def _read_lock(path: Path, parse):
         return {}
     try:
         return parse(path.read_text(encoding="utf-8"))
-    except (ValueError, UnicodeDecodeError) as error:
+    except ValueError as error:  # UnicodeDecodeError included
         raise ImportRefused(f"{path}: malformed lock file ({error})") from error
+    except OSError as error:
+        raise ImportRefused(f"{path}: cannot read the lock file ({error.strerror})") from error
 
 
 def _split(library: Library) -> tuple[dict[str, tuple[Item, Path]], dict[str, tuple[str, ...]]]:
@@ -101,6 +103,8 @@ def _seed_lock(out_dir: Path, library: Library, bootstrap_from: Path | None):
     try:
         result = bootstrap(bootstrap_from, library)
     except OSError as error:
+        if error.filename is None:
+            raise ImportRefused(f"cannot read during bootstrap: {error}") from error
         raise ImportRefused(f"{error.filename}: cannot read ({error.strerror})") from error
     return dict(result.lock), result
 
