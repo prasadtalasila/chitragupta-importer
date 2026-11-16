@@ -3,7 +3,7 @@
 import pytest
 from run_fixture import RICHSTEIN, SMITH, build, existing_bibliography, snapshot
 
-from chitragupta_importer.run import ImportRefused, import_zotero
+from chitragupta_importer.run import ImportRefused, import_zotero, pdf_destination
 from chitragupta_importer.sources.zotero import UnknownSchema
 
 
@@ -72,3 +72,43 @@ def test_refusal_writes_nothing(tmp_path):
     with pytest.raises(UnknownSchema):
         import_zotero(build(tmp_path / "v2", RICHSTEIN, SMITH, schema_version=999), out)
     assert snapshot(out) == before
+
+
+def test_unsafe_citekey_in_lock_refused(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "citekeys.lock").write_text("zotero:user/ITEMAAAA\t../../x\n", encoding="utf-8")
+    before = snapshot(tmp_path)
+    data_dir = build(tmp_path / "lib", {**RICHSTEIN, "key": "ITEMAAAA"})
+    with pytest.raises(ImportRefused, match=r"'\.\./\.\./x'.*zotero:user/ITEMAAAA.*contains '/'"):
+        import_zotero(data_dir, out)
+    after = {k: v for k, v in snapshot(tmp_path).items() if not k.startswith("lib/")}
+    assert after == before
+
+
+def test_dormant_unsafe_citekey_in_lock_is_left_alone(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "citekeys.lock").write_text("zotero:user/GONE0000\t../../x\n", encoding="utf-8")
+    import_zotero(build(tmp_path, RICHSTEIN), out)
+    assert "zotero:user/GONE0000\t../../x\n" in (out / "citekeys.lock").read_text(encoding="utf-8")
+    assert not (tmp_path / "x.pdf").exists()
+
+
+@pytest.mark.parametrize("name", ["../x.pdf", "../../x.pdf", "sub/../../x.pdf", "/abs/x.pdf"])
+def test_pdf_destination_outside_files_refused(tmp_path, name):
+    with pytest.raises(ImportRefused, match="outside"):
+        pdf_destination(tmp_path / "out", name)
+
+
+def test_pdf_destination_through_symlink_refused(tmp_path):
+    (tmp_path / "out" / "files").mkdir(parents=True)
+    (tmp_path / "elsewhere").mkdir()
+    (tmp_path / "out" / "files" / "link.pdf").symlink_to(tmp_path / "elsewhere" / "x.pdf")
+    with pytest.raises(ImportRefused, match="outside"):
+        pdf_destination(tmp_path / "out", "link.pdf")
+
+
+def test_pdf_destination_inside_files(tmp_path):
+    out = tmp_path / "out"
+    assert pdf_destination(out, "k.pdf") == out / "files" / "k.pdf"

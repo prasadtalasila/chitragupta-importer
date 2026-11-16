@@ -12,6 +12,7 @@ from chitragupta_importer.bibtex import render_bibliography, render_entry, rende
 from chitragupta_importer.bootstrap import BootstrapResult, bootstrap
 from chitragupta_importer.citekeys import (
     assign_citekeys,
+    citekey_problem,
     format_citekey_lock,
     key_stem,
     parse_citekey_lock,
@@ -121,10 +122,28 @@ def _render(
     return render_bibliography(name_table, entries)
 
 
+def _check_citekeys(included: Mapping[str, tuple[Item, Path]], lock: Mapping[str, str]) -> None:
+    """Refuse when an included item's citekey from the lock is not a safe citekey."""
+    for item_id in sorted(included):
+        problem = citekey_problem(lock[item_id])
+        if problem is not None:
+            raise ImportRefused(f"unsafe citekey {lock[item_id]!r} for item {item_id}: {problem}")
+
+
+def pdf_destination(out_dir: Path, name: str) -> Path:
+    """`out_dir/files/name`; ImportRefused if it resolves outside `out_dir/files`."""
+    files = out_dir / FILES
+    dest = files / name
+    if not dest.resolve().is_relative_to(files.resolve()):
+        raise ImportRefused(f"{dest}: PDF destination resolves outside {files}")
+    return dest
+
+
 def _write(out_dir: Path, plan: _Plan) -> None:
     """Write PDFs, the bibliography, the citekey lock and, last, the collection lock."""
-    for name, src in sorted(plan.pdfs.items()):
-        copy_pdf(src, out_dir / FILES / name)
+    pdfs = [(pdf_destination(out_dir, name), src) for name, src in sorted(plan.pdfs.items())]
+    for dest, src in pdfs:
+        copy_pdf(src, dest)
     atomic_write(out_dir / BIBLIOGRAPHY, plan.bibliography)
     atomic_write(out_dir / CITEKEY_LOCK, format_citekey_lock(plan.citekey_lock))
     atomic_write(out_dir / COLLECTION_LOCK, format_collection_lock(plan.collection_lock))
@@ -142,6 +161,7 @@ def import_zotero(data_dir: Path, out_dir: Path, bootstrap_from: Path | None = N
     collection_lock = _read_lock(out_dir / COLLECTION_LOCK, parse_collection_lock)
     stems = {item_id: key_stem(item) for item_id, (item, _) in included.items()}
     lock, new_ids = assign_citekeys(stems, lock)
+    _check_citekeys(included, lock)
     used = {c for item, _ in included.values() for c in item.collection_ids}
     records, changes = update_collections(collection_lock, library.collections, used)
     plan = _Plan(
