@@ -2,7 +2,7 @@
 
 import re
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
 
 from chitragupta_importer.model import Item
 
@@ -84,7 +84,8 @@ def format_citekey_lock(lock: Mapping[str, str]) -> str:
     return "".join(f"{item_id}\t{lock[item_id]}\n" for item_id in sorted(lock))
 
 
-def _free_spelling(stem: str, used: set[str]) -> str:
+def free_spelling(stem: str, used: Set[str]) -> str:
+    """Return `stem`, or `stem-N` with the lowest N >= 1 not in `used` (a clash suffix)."""
     if stem not in used:
         return stem
     n = 1
@@ -107,7 +108,7 @@ def assign_citekeys(
     used = set(updated.values())
     new = []
     for item_id in sorted(set(stems) - set(lock)):
-        citekey = _free_spelling(stems[item_id], used)
+        citekey = free_spelling(stems[item_id], used)
         problem = citekey_problem(citekey)
         if problem is not None:
             raise UnsafeCitekey(f"new citekey {citekey!r} for item {item_id}: {problem}")
