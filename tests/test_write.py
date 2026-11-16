@@ -105,3 +105,14 @@ def test_reports_unreferenced_files(tmp_path):
 
 def test_unreferenced_files_of_missing_dir(tmp_path):
     assert not unreferenced_files(tmp_path / "files", set())
+
+
+@pytest.mark.parametrize(("umask", "mode"), [(0o022, 0o644), (0o002, 0o664)])
+def test_written_files_follow_umask(tmp_path, monkeypatch, umask, mode):
+    monkeypatch.setattr(write, "UMASK", umask)
+    src = tmp_path / "paper.pdf"
+    src.write_bytes(b"%PDF-1.4\n")
+    atomic_write(tmp_path / "out" / "bibliography.bib", "@article{smith2020}\n")
+    copy_pdf(src, tmp_path / "out" / "files" / "smith2020.pdf")
+    assert (tmp_path / "out" / "bibliography.bib").stat().st_mode & 0o777 == mode
+    assert (tmp_path / "out" / "files" / "smith2020.pdf").stat().st_mode & 0o777 == mode

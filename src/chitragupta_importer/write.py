@@ -7,8 +7,18 @@ from collections.abc import Set
 from pathlib import Path
 
 
+def _read_umask() -> int:
+    """The process umask, read once: os.umask can only be read by setting it."""
+    umask = os.umask(0o022)
+    os.umask(umask)
+    return umask
+
+
+UMASK = _read_umask()
+
+
 def _replace_via_temp(dest: Path, fill) -> None:
-    """Fill a temp file next to `dest`, fsync it, then move it onto `dest`."""
+    """Fill a temp file next to `dest`, fsync it, give it the umask mode, move it onto `dest`."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temp_name = tempfile.mkstemp(dir=dest.parent, prefix=f".{dest.name}.")
     temp_path = Path(temp_name)
@@ -17,6 +27,7 @@ def _replace_via_temp(dest: Path, fill) -> None:
             fill(handle)
             handle.flush()
             os.fsync(handle.fileno())
+        temp_path.chmod(0o666 & ~UMASK)
         os.replace(temp_path, dest)
     except BaseException:
         temp_path.unlink(missing_ok=True)
