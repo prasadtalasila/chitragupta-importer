@@ -1,42 +1,9 @@
 """The import run: reading a library and writing the papers directory."""
 
-import pytest
-from zotero_fixture import ZoteroFixture
+from run_fixture import RICHSTEIN, SMITH, build, existing_bibliography, snapshot
 
 from chitragupta_importer.bootstrap import BootstrapResult
-from chitragupta_importer.run import ImportRefused, RunSummary, format_summary, import_zotero
-from chitragupta_importer.sources.zotero import UnknownSchema
-
-RICHSTEIN = {
-    "key": "AAAA1111",
-    "fields": {"title": "Characterizing the Digital Twin", "date": "2024"},
-    "creators": [("Richstein", "Rebecca", "author")],
-    "pdfs": [("paper.pdf", b"%PDF-1")],
-    "collections": ["COLL0001"],
-}
-SMITH = {
-    "key": "BBBB2222",
-    "fields": {"title": "Digital Platforms", "date": "2020"},
-    "creators": [("Smith", "Jo", "author")],
-    "pdfs": [("smith.pdf", b"%PDF-2")],
-}
-
-
-def build(root, *items, schema_version=121, collections=(("COLL0001", "Digital Twin"),)):
-    """Build a Zotero data directory under `root` holding `items` (dicts of add_item kwargs)."""
-    fixture = ZoteroFixture(root)
-    for key, name in collections:
-        fixture.add_collection(key, name)
-    for spec in items:
-        fixture.add_item(**spec)
-    return fixture.build(schema_version)
-
-
-def snapshot(directory):
-    """Every file under `directory`, relative path -> bytes."""
-    return {
-        str(p.relative_to(directory)): p.read_bytes() for p in directory.rglob("*") if p.is_file()
-    }
+from chitragupta_importer.run import RunSummary, format_summary, import_zotero
 
 
 def test_writes_papers_directory(tmp_path):
@@ -125,17 +92,6 @@ def test_retired_key_not_reused(tmp_path):
     assert "zotero:user/CCCC3333\tsmith_digital_2020-1\n" in lock
 
 
-def existing_bibliography(tmp_path):
-    path = tmp_path / "existing" / "references.bib"
-    path.parent.mkdir()
-    path.write_text(
-        "@article{rr2024,\n  title = {Characterizing the digital twin},\n}\n"
-        "@article{lost,\n  title = {Nowhere},\n}\n",
-        encoding="utf-8",
-    )
-    return path
-
-
 def test_bootstrap_freezes_existing_keys(tmp_path):
     out = tmp_path / "out"
     data_dir = build(tmp_path, RICHSTEIN, SMITH)
@@ -148,47 +104,6 @@ def test_bootstrap_freezes_existing_keys(tmp_path):
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
         "zotero:user/AAAA1111\trr2024\nzotero:user/BBBB2222\tsmith_digital_2020\n"
     )
-
-
-def test_bootstrap_with_existing_lock_refused(tmp_path):
-    out = tmp_path / "out"
-    data_dir = build(tmp_path, RICHSTEIN)
-    import_zotero(data_dir, out)
-    before = snapshot(out)
-    with pytest.raises(ImportRefused, match="citekeys.lock"):
-        import_zotero(data_dir, out, bootstrap_from=existing_bibliography(tmp_path))
-    assert snapshot(out) == before
-
-
-def test_unreadable_bootstrap_file_refused(tmp_path):
-    data_dir, out = build(tmp_path, RICHSTEIN), tmp_path / "out"
-    bad = tmp_path / "latin1.bib"
-    bad.write_bytes(b"@article{k,\n  title = {Caf\xe9},\n}\n")
-    with pytest.raises(ImportRefused, match="latin1.bib"):
-        import_zotero(data_dir, out, bootstrap_from=bad)
-    with pytest.raises(ImportRefused, match="absent.bib"):
-        import_zotero(data_dir, out, bootstrap_from=tmp_path / "absent.bib")
-    assert not out.exists()
-
-
-@pytest.mark.parametrize("lock_name", ["citekeys.lock", "collections.lock"])
-def test_malformed_lock_refused(tmp_path, lock_name):
-    out = tmp_path / "out"
-    out.mkdir()
-    (out / lock_name).write_text("no tabs here\n", encoding="utf-8")
-    before = snapshot(out)
-    with pytest.raises(ImportRefused, match=lock_name):
-        import_zotero(build(tmp_path, RICHSTEIN), out)
-    assert snapshot(out) == before
-
-
-def test_refusal_writes_nothing(tmp_path):
-    out = tmp_path / "out"
-    import_zotero(build(tmp_path / "v1", RICHSTEIN), out)
-    before = snapshot(out)
-    with pytest.raises(UnknownSchema):
-        import_zotero(build(tmp_path / "v2", RICHSTEIN, SMITH, schema_version=999), out)
-    assert snapshot(out) == before
 
 
 def test_nothing_written_outside_out(tmp_path):

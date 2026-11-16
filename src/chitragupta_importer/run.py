@@ -94,9 +94,13 @@ def _seed_lock(out_dir: Path, library: Library, bootstrap_from: Path | None):
     if lock_path.exists():
         raise ImportRefused(f"{lock_path} exists: bootstrap needs a new citekey lock")
     try:
-        result = bootstrap(bootstrap_from, library)
+        bootstrap_from.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as error:
         raise ImportRefused(f"{bootstrap_from}: cannot read the bibliography ({error})") from error
+    try:
+        result = bootstrap(bootstrap_from, library)
+    except OSError as error:
+        raise ImportRefused(f"{error.filename}: cannot read ({error.strerror})") from error
     return dict(result.lock), result
 
 

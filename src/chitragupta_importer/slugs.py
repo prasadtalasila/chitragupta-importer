@@ -36,11 +36,16 @@ def _clean(name: str) -> str:
 
 
 def parse_collection_lock(text: str) -> dict[str, CollectionRecord]:
-    """Read collection lock text into collection ID -> record."""
+    """Read collection lock text into collection ID -> record; ValueError if malformed."""
     records = {}
-    for line in text.split("\n"):
+    for number, line in enumerate(text.split("\n"), start=1):
         if line.strip():
-            collection_id, parent_id, slug, name, status = line.split("\t")
+            fields = line.split("\t")
+            if len(fields) != 5:
+                raise ValueError(f"line {number}: expected 5 tab-separated fields")
+            collection_id, parent_id, slug, name, status = fields
+            if status not in ("live", "retired"):
+                raise ValueError(f"line {number}: status {status!r} is not live or retired")
             parent = None if parent_id == "-" else parent_id
             records[collection_id] = CollectionRecord(collection_id, parent, slug, name, status)
     return records
