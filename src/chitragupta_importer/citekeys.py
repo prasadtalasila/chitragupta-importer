@@ -12,13 +12,16 @@ _RESERVED = frozenset(
     + [f"COM{n}" for n in range(1, 10)]
     + [f"LPT{n}" for n in range(1, 10)]
 )
-_STOP_WORDS = frozenset(
-    "a an the some from on in to of do with der die das ein eine einer eines einem"
-    " einen un une la le l el las los al uno una unos unas de des del d".split()
+# Zotero's built-in exporter drops these words, and inline HTML tags, from the
+# lower-cased title before taking its first word; \b is an ASCII word boundary.
+_DROPPED_FROM_TITLE = re.compile(
+    r"\b(a|an|the|some|from|on|in|to|of|do|with|der|die|das|ein|eine|einer|eines|einem"
+    r"|einen|un|une|la|le|l'|el|las|los|al|uno|una|unos|unas|de|des|del|d')(\s+|\b)"
+    r'|</?(i|b|sup|sub|sc|span style="small-caps"|span)>',
+    re.ASCII,
 )
-_WORD = re.compile(r"\w[\w-]*")
 _YEAR = re.compile(r"[0-9]{4}")
-_OUTSIDE_KEY_ALPHABET = re.compile(r"[^a-z0-9-]")
+_OUTSIDE_KEY_ALPHABET = re.compile(r"[^a-z0-9_-]")
 
 
 class UnsafeCitekey(ValueError):
@@ -48,15 +51,16 @@ def _normalise(text: str) -> str:
 
 
 def _creator_part(item: Item) -> str:
-    authors = [c for c in item.creators if c.role == "author"]
-    chosen = authors or list(item.creators)
-    return _normalise(chosen[0].last) if chosen else "noauthor"
+    """The first creator's last name, whatever its role; spaces become `_`, commas go."""
+    if not item.creators or not item.creators[0].last:
+        return "noauthor"
+    return _normalise(item.creators[0].last.lower().replace(" ", "_").replace(",", ""))
 
 
 def _title_part(item: Item) -> str:
-    words = _WORD.findall(item.fields.get("title", ""))
-    kept = [w for w in words if w.casefold() not in _STOP_WORDS]
-    return _normalise(kept[0]) if kept else ""
+    """The first whitespace-separated word left once the dropped words are gone."""
+    kept = _DROPPED_FROM_TITLE.sub("", item.fields.get("title", "").lower())
+    return _normalise(re.split(r"\s+", kept)[0])
 
 
 def _year_part(item: Item) -> str:

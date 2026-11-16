@@ -58,9 +58,10 @@ def test_stem_with_nothing():
     assert key_stem(item()) == "noauthor__nodate"
 
 
-def test_stem_prefers_first_author_over_earlier_editor():
+def test_stem_takes_first_creator_whatever_its_role():
     it = item(creators=[("Ed", "A", "editor"), ("Writer", "B", "author")])
-    assert key_stem(it) == "writer__nodate"
+    assert key_stem(it) == "ed__nodate"
+    assert key_stem(item(creators=[("", "Only First", "author")])) == "noauthor__nodate"
 
 
 def test_stem_uses_first_creator_of_any_role_when_no_author():
@@ -70,7 +71,19 @@ def test_stem_uses_first_creator_of_any_role_when_no_author():
 
 def test_stem_single_field_creator():
     it = item(creators=[("Microsoft Research", "", "author")])
-    assert key_stem(it).startswith("microsoftresearch_")
+    assert key_stem(it).startswith("microsoft_research_")
+
+
+@pytest.mark.parametrize(
+    ("last", "part"),
+    [
+        ("van Dyke", "van_dyke"),
+        ("Lee, Kim, Park", "lee_kim_park"),
+        ("García Lorca", "garcia_lorca"),
+    ],
+)
+def test_stem_creator_spaces_become_underscores_commas_dropped(last, part):
+    assert key_stem(item(creators=[(last, "", "author")])) == f"{part}__nodate"
 
 
 def test_stem_drops_characters_outside_a_z_0_9_hyphen():
@@ -84,7 +97,16 @@ def test_stem_drops_characters_outside_a_z_0_9_hyphen():
         ("A Study", "study"),
         ("THE AN Of with Models", "models"),
         ("Die Theorie der Dinge", "theorie"),
-        ("L'Évolution des espèces", "evolution"),
+        ("L'Évolution des espèces", "levolution"),
+        ("Out-of-the-Box Tools", "out---box"),
+        ("On-line Learning", "-line"),
+        ("Hands-on with Sensors", "hands-sensors"),
+        ("Models-as-a-Service", "models-as--service"),
+        ("(Co-)Design Methods", "co-design"),
+        ("TCP/IP stacks", "tcpip"),
+        ("Don't panic", "dont"),
+        ("Rule\u2010based systems", "rulebased"),
+        ("The <i>Gene</i> Study", "gene"),
         ("On", ""),
         ("", ""),
     ],

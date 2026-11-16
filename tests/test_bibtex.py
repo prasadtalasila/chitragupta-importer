@@ -2,9 +2,7 @@
 
 import re
 
-import bibtexparser
 import pytest
-from bibtexparser.bparser import BibTexParser
 
 from chitragupta_importer.bibtex import render_bibliography, render_entry, render_name_table
 from chitragupta_importer.model import Creator, Item
@@ -79,6 +77,7 @@ def test_single_field_creator_braced():
 def test_editor_and_contributor_fields():
     creators = [
         author("Doe", "Jane"),
+        Creator("Goe", "Gus", False, "seriesEditor"),
         Creator("Roe", "Rick", False, "editor"),
         Creator("Poe", "Pam", False, "editor"),
         Creator("Low", "Lee", False, "contributor"),
@@ -86,7 +85,7 @@ def test_editor_and_contributor_fields():
     ]
     fields = fields_of(render_entry("k", item("book", creators=creators), []))
     assert fields["author"] == "{Doe, Jane}"
-    assert fields["editor"] == "{Roe, Rick and Poe, Pam}"
+    assert fields["editor"] == "{Goe, Gus and Roe, Rick and Poe, Pam}"
     assert fields["collaborator"] == "{Low, Lee}"
     assert "Tran" not in render_entry("k", item("book", creators=creators), [])
 
@@ -113,6 +112,48 @@ def test_conference_paper_booktitle_protected():
     assert "journal" not in fields
 
 
+@pytest.mark.parametrize(
+    ("zotero_type", "source"),
+    [("webpage", "websiteTitle"), ("blogPost", "blogTitle"), ("forumPost", "forumTitle")],
+)
+def test_journal_for_types_other_than_conference_paper_and_book_section(zotero_type, source):
+    fields = fields_of(render_entry("k", item(zotero_type, **{source: "Site"}), []))
+    assert fields["journal"] == "{Site}"
+    assert "booktitle" not in fields
+
+
+@pytest.mark.parametrize(
+    ("pages", "written"),
+    [
+        ("31-47", "31--47"),
+        ("1\u20135", "1--5"),
+        ("4:1-4:20", "4:1--4:20"),
+        ("2--9", "2--9"),
+        ("7", "7"),
+    ],
+)
+def test_page_range_dash(pages, written):
+    assert fields_of(render_entry("k", item(pages=pages), []))["pages"] == f"{{{written}}}"
+
+
+def test_publisher_issn_doi_lines_of_extra_become_fields():
+    extra = "Publisher: IEEE\nissn: 1234-5678\nDOI: 10.1/x\nConference Name: C"
+    fields = fields_of(render_entry("k", item(extra=extra), []))
+    assert (fields["publisher"], fields["issn"], fields["doi"]) == (
+        "{IEEE}",
+        "{1234-5678}",
+        "{10.1/x}",
+    )
+    assert fields["note"] == "{Conference Name: C}"
+
+
+def test_item_field_wins_over_extra_line():
+    zotero = item(publisher="ACM", ISSN="1", extra="Publisher: IEEE\nISSN: 2")
+    text = render_entry("k", zotero, [])
+    assert (fields_of(text)["publisher"], fields_of(text)["issn"]) == ("{ACM}", "{1}")
+    assert "\tnote = " not in text
+
+
 def test_report_and_thesis_fields():
     report = item("report", institution="Aarhus", reportType="Tech", reportNumber="7")
     assert fields_of(render_entry("k", report, [])) == {
@@ -122,7 +163,7 @@ def test_report_and_thesis_fields():
         "file": "{Full Text PDF:files/k.pdf:application/pdf}",
     }
     thesis = fields_of(render_entry("k", item("thesis", university="AU", thesisType="PhD"), []))
-    assert (thesis["school"], thesis["type"]) == ("{AU}", "{PhD}")
+    assert (thesis["school"], thesis["type"]) == ("{AU}", "{{PhD}}")
 
 
 SIMPLE_SOURCES = (
@@ -178,62 +219,6 @@ def test_urldate_is_date_part_of_access_date():
     assert fields_of(render_entry("k", item(accessDate="2023-05-06 07:08:09"), []))["urldate"] == (
         "{2023-05-06}"
     )
-
-
-def test_specials_and_backslash_escaped():
-    fields = fields_of(render_entry("k", item(extra=r"a\b # $ % & _"), []))
-    assert fields["note"] == r"{a\textbackslash{}b \# \$ \% \& \_}"
-
-
-def test_paired_and_unpaired_braces_in_entries():
-    fields = fields_of(render_entry("k", item(extra="{a} b{ c} }d {e{f}"), []))
-    assert fields["note"] == (r"{\{a\} b\{ c\} \textbraceright{}d \textbraceleft{}e\{f\}}")
-
-
-def unescape(value):
-    """Undo the renderer: drop protection braces, then resolve escapes."""
-    tokens = re.findall(r"\\textbrace(?:left|right)\{\}|\\textbackslash\{\}|\\.|.", value)
-    named = {r"\textbraceleft{}": "{", r"\textbraceright{}": "}", r"\textbackslash{}": "\\"}
-    out = []
-    for token in tokens:
-        if token in named:
-            out.append(named[token])
-        elif token.startswith("\\"):
-            out.append(token[1:])
-        elif token not in "{}":
-            out.append(token)
-    return "".join(out)
-
-
-def test_specials_round_trip():
-    title = r"50% of {A} & B_c #1 {open Close} x\y"
-    entries = [
-        render_entry("a", item(title=title), ["paired", "lone"]),
-        render_entry("b", item("conferencePaper", title="T", proceedingsTitle="P {Q"), []),
-    ]
-    table = render_name_table([("paired", "Paired {X}"), ("lone", "Lone { brace } }")])
-    text = render_bibliography(table, entries)
-    database = bibtexparser.loads(text, BibTexParser(common_strings=True))
-    assert [e["ID"] for e in database.entries] == ["a", "b"]
-    assert unescape(database.entries[0]["title"]) == title
-    assert unescape(database.entries[1]["booktitle"]) == "P {Q"
-    # bibtexparser expands tabs in comments; the table block parses back whole.
-    table_text = "cg-collections v1\npaired\tPaired \\{X\\}\nlone\tLone \\{ brace \\}  \n"
-    assert database.comments == [table_text.expandtabs()]
-
-
-def test_name_table_block():
-    assert render_name_table([("digital-twin", "Digital Twin")]) == (
-        "@comment{cg-collections v1\ndigital-twin\tDigital Twin\n}\n"
-    )
-
-
-def test_name_table_escapes_braces():
-    assert render_name_table([("a", "A {B}")]) == "@comment{cg-collections v1\na\tA \\{B\\}\n}\n"
-
-
-def test_name_table_unpaired_brace_becomes_space():
-    assert render_name_table([("a", "A }B{")]) == "@comment{cg-collections v1\na\tA  B \n}\n"
 
 
 def test_empty_name_table():

@@ -6,15 +6,44 @@ storage) and writes one consistent `papers/` directory for
 reads only that directory and never learns the importer exists.
 Zotero is the first supported reference manager.
 
-```text
-papers/
-├── bibliography.bib      one entry per item that has a PDF
-├── citekeys.lock         item id -> citekey; a written key never changes
-└── files/
-    └── <citekey>.pdf
+## Usage
+
+The first import run freezes the citekeys of an existing bibliography (for
+example a Zotero BibTeX export) in a new citekey lock:
+
+```bash
+chitragupta-importer zotero --data-dir ~/Zotero --out papers --bootstrap old.bib
 ```
 
-**Status:** repository scaffold only. The Zotero import is designed in
+Every later import run reads the locks in `papers/` and needs no
+`--bootstrap`:
+
+```bash
+chitragupta-importer zotero --data-dir ~/Zotero --out papers
+```
+
+An import run reads the personal library only; `zotero.sqlite` is opened
+read-only and nothing is written outside `--out`. It prints a summary:
+included items, left-out items by reason, new citekeys, collection
+changes and files in `papers/files/` it did not write. A refused import
+run writes nothing.
+
+The papers directory:
+
+```text
+papers/
+├── bibliography.bib      the name table, then one entry per included item
+├── citekeys.lock         item ID -> citekey; a written citekey never changes
+├── collections.lock      collection ID -> segment slug, parent and name
+└── files/
+    └── <citekey>.pdf     the item's main PDF
+```
+
+Each entry lists the slug paths of the collections its item is directly in,
+in `cg-collections`; the name table (a `@comment{cg-collections v1 ...}`
+block at the top) gives each slug path its collection's own name.
+
+The design is in
 [docs/superpowers/specs/2026-11-13-zotero-importer-design.md](docs/superpowers/specs/2026-11-13-zotero-importer-design.md).
 
 ## Install and develop
