@@ -148,3 +148,15 @@ def test_bootstrap_oserror_without_filename_shows_the_error(tmp_path, monkeypatc
     with pytest.raises(ImportRefused, match=message) as refused:
         import_zotero(build(tmp_path, RICHSTEIN), tmp_path / "out", existing_bibliography(tmp_path))
     assert "None" not in str(refused.value)
+
+
+def test_file_unreadable_during_bootstrap_matching_refused(tmp_path, monkeypatch):
+    data_dir, out = build(tmp_path, RICHSTEIN), tmp_path / "out"
+
+    def gone(*_):
+        raise FileNotFoundError(2, "No such file or directory", "vanished.pdf")
+
+    monkeypatch.setattr("chitragupta_importer.inputs.bootstrap", gone)
+    with pytest.raises(ImportRefused, match="vanished.pdf: cannot read during bootstrap"):
+        import_zotero(data_dir, out, bootstrap_from=existing_bibliography(tmp_path))
+    assert not out.exists()

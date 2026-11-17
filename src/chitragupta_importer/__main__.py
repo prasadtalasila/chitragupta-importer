@@ -35,10 +35,18 @@ def main() -> None:
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Existing bibliography whose citekeys to freeze in a new citekey lock.",
 )
-def zotero(data_dir: Path, out: Path, bootstrap_from: Path | None) -> None:
+@click.option(
+    "--merge-duplicates",
+    is_flag=True,
+    help="Merge each duplicate group into one item instead of refusing.",
+)
+@click.option("--dry-run", is_flag=True, help="Print the summary but write nothing.")
+def zotero(
+    data_dir: Path, out: Path, bootstrap_from: Path | None, merge_duplicates: bool, dry_run: bool
+) -> None:
     """Import the personal Zotero library into a papers directory."""
     try:
-        summary = import_zotero(data_dir, out, bootstrap_from)
+        summary = import_zotero(data_dir, out, bootstrap_from, merge_duplicates, dry_run)
     except (UnknownSchema, UnsafeCitekey, BootstrapRefused, ImportRefused) as error:
         raise click.ClickException(str(error)) from error
     click.echo(format_summary(summary), nl=False)

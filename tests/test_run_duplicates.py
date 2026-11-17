@@ -1,18 +1,10 @@
-"""Import runs on a library with duplicate items: merged before anything else."""
+"""Import runs with --merge-duplicates: duplicate items merged before anything else."""
 
 import pytest
-from run_fixture import RICHSTEIN, build, snapshot
+from run_fixture import NEWER, OLDER, build, snapshot
 
 from chitragupta_importer.run import ImportRefused, format_summary, import_zotero
 
-OLDER = {**RICHSTEIN, "date_added": "2019-01-01 00:00:00"}
-NEWER = {
-    **RICHSTEIN,
-    "key": "BBBB2222",
-    "fields": {"title": "Characterizing the digital twin", "date": "2024"},
-    "pdfs": [("copy.pdf", b"%PDF-1")],
-    "date_added": "2020-01-01 00:00:00",
-}
 DUPLICATE_LINE = "duplicate zotero:user/BBBB2222 of zotero:user/AAAA1111\n"
 
 
@@ -31,7 +23,7 @@ def existing_with_two_keys(tmp_path):
 
 def test_duplicates_merged_before_import(tmp_path):
     out = tmp_path / "out"
-    summary = import_zotero(build(tmp_path, NEWER, OLDER), out)
+    summary = import_zotero(build(tmp_path, NEWER, OLDER), out, merge_duplicates=True)
     assert summary.included == 1
     assert summary.duplicates == {"zotero:user/BBBB2222": "zotero:user/AAAA1111"}
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
@@ -46,7 +38,7 @@ def test_duplicates_merged_before_import(tmp_path):
 def test_bootstrap_with_duplicates_freezes_one_key(tmp_path):
     out = tmp_path / "out"
     data_dir = build(tmp_path, NEWER, OLDER)
-    summary = import_zotero(data_dir, out, bootstrap_from=existing_with_two_keys(tmp_path))
+    summary = import_zotero(data_dir, out, existing_with_two_keys(tmp_path), merge_duplicates=True)
     assert summary.bootstrap.dropped == ("richstein_characterizing_2024-1",)
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
         "zotero:user/AAAA1111\trichstein_characterizing_2024\n"
@@ -59,7 +51,7 @@ def test_bootstrap_with_duplicates_freezes_one_key(tmp_path):
 
 def test_later_zotero_merge_keeps_key(tmp_path):
     out = tmp_path / "out"
-    import_zotero(build(tmp_path / "v1", NEWER, OLDER), out)
+    import_zotero(build(tmp_path / "v1", NEWER, OLDER), out, merge_duplicates=True)
     lock = (out / "citekeys.lock").read_text(encoding="utf-8")
     merged_in_zotero = {**OLDER, "pdfs": [*OLDER["pdfs"], *NEWER["pdfs"]]}
     summary = import_zotero(build(tmp_path / "v2", merged_in_zotero), out)
@@ -71,9 +63,9 @@ def test_later_zotero_merge_keeps_key(tmp_path):
 
 def test_rerun_with_duplicates_is_byte_identical(tmp_path):
     data_dir, out = build(tmp_path, NEWER, OLDER), tmp_path / "out"
-    import_zotero(data_dir, out)
+    import_zotero(data_dir, out, merge_duplicates=True)
     first = snapshot(out)
-    summary = import_zotero(data_dir, out)
+    summary = import_zotero(data_dir, out, merge_duplicates=True)
     assert snapshot(out) == first
     assert summary.duplicates == {"zotero:user/BBBB2222": "zotero:user/AAAA1111"}
 
@@ -87,7 +79,7 @@ def test_unreadable_pdf_while_merging_names_the_pdf(tmp_path, monkeypatch):
 
     monkeypatch.setattr("chitragupta_importer.normalise.hash_file", refuse)
     with pytest.raises(ImportRefused, match="while merging duplicate items") as refused:
-        import_zotero(data_dir, out)
+        import_zotero(data_dir, out, merge_duplicates=True)
     assert str(pdf) in str(refused.value)
     assert not out.exists()
 
@@ -100,6 +92,6 @@ def test_oserror_without_filename_while_merging_shows_the_error(tmp_path, monkey
     with pytest.raises(
         ImportRefused, match="while merging duplicate items: device gone"
     ) as refused:
-        import_zotero(build(tmp_path, NEWER, OLDER), tmp_path / "out")
+        import_zotero(build(tmp_path, NEWER, OLDER), tmp_path / "out", merge_duplicates=True)
     assert "None" not in str(refused.value)
     assert not (tmp_path / "out").exists()

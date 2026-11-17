@@ -16,6 +16,16 @@ SMITH = {
     "pdfs": [("smith.pdf", b"%PDF-2")],
 }
 
+# Two copies of one paper: the same title up to case and a shared PDF.
+OLDER = {**RICHSTEIN, "date_added": "2019-01-01 00:00:00"}
+NEWER = {
+    **RICHSTEIN,
+    "key": "BBBB2222",
+    "fields": {"title": "Characterizing the digital twin", "date": "2024"},
+    "pdfs": [("copy.pdf", b"%PDF-1")],
+    "date_added": "2020-01-01 00:00:00",
+}
+
 
 def build(root, *items, schema_version=121, collections=(("COLL0001", "Digital Twin"),)):
     """Build a Zotero data directory under `root` holding `items` (dicts of add_item kwargs)."""

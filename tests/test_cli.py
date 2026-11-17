@@ -5,6 +5,7 @@ import sys
 from importlib.metadata import version
 
 from click.testing import CliRunner
+from run_fixture import NEWER, OLDER, build
 from zotero_fixture import ZoteroFixture
 
 from chitragupta_importer.__main__ import main
@@ -71,3 +72,20 @@ def test_zotero_command_refusal_exits_nonzero(tmp_path):
     assert result.stdout == ""
     assert "Error:" in result.stderr and "999" in result.stderr
     assert not out.exists()
+
+
+def test_cli_flags(tmp_path):
+    data_dir, out = build(tmp_path, NEWER, OLDER), tmp_path / "out"
+    args = ["zotero", "--data-dir", str(data_dir), "--out", str(out)]
+    refused = CliRunner().invoke(main, args)
+    assert refused.exit_code == 1 and refused.stdout == ""
+    assert "1 duplicate groups found" in refused.stderr
+    assert "duplicate group: zotero:user/AAAA1111 (" in refused.stderr
+    dry = CliRunner().invoke(main, [*args, "--merge-duplicates", "--dry-run"])
+    assert dry.exit_code == 0, dry.output
+    assert dry.stdout.startswith("dry run: nothing written\nincluded: 1\nduplicate ")
+    assert not out.exists()
+    merged = CliRunner().invoke(main, [*args, "--merge-duplicates"])
+    assert merged.exit_code == 0, merged.output
+    assert merged.stdout == dry.stdout.removeprefix("dry run: nothing written\n")
+    assert (out / "citekeys.lock").is_file()

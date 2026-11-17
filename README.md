@@ -28,15 +28,36 @@ included items, left-out items by reason, new citekeys, collection
 changes and files in `papers/files/` it did not write. A refused import
 run writes nothing.
 
-Duplicate items in the library (same item type, same title ignoring case
-and punctuation, and a shared DOI or identical PDF) are merged before
-anything else, as a Zotero merge would: the item added first survives and
-gains the others' attachments, collections and tags. Each other item is
-reported as `duplicate <item ID> of <item ID>` and gets no entry and no
-citekey. When the bibliography given to `--bootstrap` has several entries
-for one merged item, one citekey is frozen and the summary lists the others
-as `dropped citekey: ...`, so drafts citing them can be updated. A later
-merge in Zotero that keeps the default master keeps the frozen citekey.
+Duplicate items in the library are items with the same item type, the same
+title ignoring case and punctuation, and a shared DOI, URL or identical PDF;
+when bootstrapping, an existing entry whose URL matches several items that
+its title cannot tell apart makes those items duplicates too. By default an
+import run that finds duplicates lists each group (item IDs and titles),
+writes nothing and exits 1. `--merge-duplicates` merges each group, as a
+Zotero merge would:
+
+```bash
+chitragupta-importer zotero --data-dir ~/Zotero --out papers --merge-duplicates
+```
+
+The survivor is the item with its own PDF (among several, the one added
+first); it gains the others' collections and tags, and their attachments
+only when it has no PDF of its own. Each other item is reported as
+`duplicate <item ID> of <item ID>` and gets no entry and no citekey. When
+the bibliography given to `--bootstrap` has several entries for one merged
+item, one citekey is frozen and the summary lists the others as
+`dropped citekey: ...`, so drafts citing them can be updated. A later merge
+in Zotero that keeps the same item keeps the frozen citekey.
+
+`--dry-run` does everything but write: it creates and changes nothing
+under `--out`, refuses whatever a real import run would refuse, and prints
+the summary a real import run would print, after a first line
+`dry run: nothing written`:
+
+```bash
+chitragupta-importer zotero --data-dir ~/Zotero --out papers --bootstrap old.bib \
+    --merge-duplicates --dry-run
+```
 
 The papers directory:
 
