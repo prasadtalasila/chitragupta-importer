@@ -44,7 +44,7 @@ LIBRARY = [
 SLUG_CASES = [
     ("Digital Twin", "digital-twin"),
     ("Industry 5.0", "industry-5-0"),
-    ("Schröder & Co", "schroder-co"),
+    ("Köhler & Co", "kohler-co"),
     ("Edge/Cloud", "edge-cloud"),
     ("***", "collection"),
 ]

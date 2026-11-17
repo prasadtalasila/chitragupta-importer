@@ -86,13 +86,13 @@ def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     fx.add_collection("COLLAAAA", "Digital Twin")
     fx.add_collection("COLLBBBB", "DT Platforms", parent_key="COLLAAAA")
     fx.add_item("ITEMAAAA", fields={"title": "A Twin", "date": "2024-02-01"},
-                creators=[("Richstein", "Rebecca", "author")],
+                creators=[("Ostrander", "Ingrid", "author")],
                 pdfs=[("a.pdf", b"%PDF-1")], collections=["COLLBBBB"], tags=["twin"])
     lib = read_library(fx.build())
     item = lib.items[0]
     assert item.item_id == "zotero:user/ITEMAAAA"
     assert item.fields["title"] == "A Twin"
-    assert item.creators == (Creator("Richstein", "Rebecca", False, "author"),)
+    assert item.creators == (Creator("Ostrander", "Ingrid", False, "author"),)
     assert item.collection_ids == ("zotero:user/COLLBBBB",)
     assert item.tags == ("twin",)
     assert item.attachments[0].path.name == "a.pdf" and item.attachments[0].path.exists()
@@ -176,12 +176,12 @@ def test_missing_pdf_does_not_win_over_existing(tmp_path): ...
 @pytest.mark.parametrize("key", ["", " ", ".", "..", "a/b", "a\\b", "a:b", "a*b", "a?b",
                                  'a"b', "a<b", "a>b", "a|b", "a\x01b", "key.", "key ", "CON", "com1.x"])
 def test_unsafe(key): assert citekey_problem(key) is not None
-def test_safe(): assert citekey_problem("lehner_pattern_2023-1") is None
+def test_safe(): assert citekey_problem("dorsey_pattern_2023-1") is None
 
 def test_stem_shape():
-    it = item(creators=[("Schröder", "Kai", "author")],
-              fields={"title": "The Characterizing of Twins", "date": "2024-02"})
-    assert key_stem(it) == "schroder_characterizing_2024"
+    it = item(creators=[("Köhler", "Jan", "author")],
+              fields={"title": "The Calibrating of Twins", "date": "2024-02"})
+    assert key_stem(it) == "kohler_calibrating_2024"
 def test_stem_with_nothing(): assert key_stem(item()) == "noauthor__nodate"
 def test_stem_uses_first_creator_of_any_role_when_no_author(): ...  # editor only → editor's last name
 def test_stem_single_field_creator(): ...  # single_field "Microsoft Research" → "microsoftresearch"
@@ -257,7 +257,7 @@ def test_ambiguous_entry_refuses(tmp_path):   # one entry matches two items at i
     with pytest.raises(BootstrapRefused, match="ambiguous"): ...
 def test_item_claimed_by_two_entries_refuses(tmp_path): ...
 def test_matched_item_without_pdf_gets_no_lock_line(tmp_path):
-    assert result.not_included == ("kapteyn_toward_nodate",) and result.lock == {}
+    assert result.not_included == ("varga_toward_nodate",) and result.lock == {}
 def test_unsafe_frozen_key_refuses(tmp_path): ...   # entry key "a:b"
 ```
 
@@ -289,7 +289,7 @@ def test_unsafe_frozen_key_refuses(tmp_path): ...   # entry key "a:b"
 
 ```python
 @pytest.mark.parametrize("name,slug", [("Digital Twin", "digital-twin"), ("Industry 5.0", "industry-5-0"),
-    ("Schröder & Co", "schroder-co"), ("Edge/Cloud", "edge-cloud"), ("***", "collection")])
+    ("Köhler & Co", "kohler-co"), ("Edge/Cloud", "edge-cloud"), ("***", "collection")])
 def test_segment_slug(name, slug): assert segment_slug(name) == slug
 
 def test_ancestors_of_used_collections_are_recorded(): ...
@@ -328,19 +328,19 @@ def test_name_table_rows_cover_used_and_ancestors_only(): ...
 
 ```python
 def test_article_entry_exact():
-    text = render_entry("richstein_characterizing_2024", article_item(), ["digital-twin.dt-platforms"])
+    text = render_entry("ostrander_calibrating_2024", article_item(), ["digital-twin.dt-platforms"])
     assert text == (
-        "@article{richstein_characterizing_2024,\n"
-        "\ttitle = {Characterizing the {Digital} {Twin}},\n"
+        "@article{ostrander_calibrating_2024,\n"
+        "\ttitle = {Calibrating the {Digital} {Twin}},\n"
         "\tvolume = {8},\n"
-        "\tdoi = {10.3390/designs8010008},\n"
-        "\tjournal = {Designs},\n"
-        "\tauthor = {Richstein, Rebecca and Schröder, Kai-Uwe},\n"
+        "\tdoi = {10.9999/fictional.2024.0008},\n"
+        "\tjournal = {Fictional Twins},\n"
+        "\tauthor = {Ostrander, Ingrid and Köhler, Jan-Ole},\n"
         "\tmonth = feb,\n"
         "\tyear = {2024},\n"
         "\tkeywords = {design, digital twin},\n"
         "\tpages = {8},\n"
-        "\tfile = {Full Text PDF:files/richstein_characterizing_2024.pdf:application/pdf},\n"
+        "\tfile = {Full Text PDF:files/ostrander_calibrating_2024.pdf:application/pdf},\n"
         "\tcg-collections = {digital-twin.dt-platforms},\n"
         "}\n")
 @pytest.mark.parametrize("zotero_type,bibtex_type", [("journalArticle", "article"), ("conferencePaper", "inproceedings"),
@@ -410,7 +410,7 @@ def test_reports_unreferenced_files(tmp_path): ... # files/old.pdf not in writte
 def test_writes_papers_directory(tmp_path):
     summary = import_zotero(data_dir, out)
     assert sorted(p.name for p in out.iterdir()) == ["bibliography.bib", "citekeys.lock", "collections.lock", "files"]
-    assert (out / "files" / "richstein_characterizing_2024.pdf").read_bytes() == b"%PDF-1"
+    assert (out / "files" / "ostrander_calibrating_2024.pdf").read_bytes() == b"%PDF-1"
 def test_second_run_is_byte_identical(tmp_path): ...
 def test_adding_an_item_changes_only_its_lines(tmp_path): ...   # diff of bibliography = one new entry; lock = one new line
 def test_left_out_items_reported_by_reason(tmp_path): ...

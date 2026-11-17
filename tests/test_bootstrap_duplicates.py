@@ -18,7 +18,7 @@ def item(tmp_path, key, title, content=TWIN, item_type="journalArticle"):
         item_id=f"zotero:user/{key}",
         item_type=item_type,
         fields={"title": title},
-        creators=(Creator("Kapteyn", "Ada", False, "author"),),
+        creators=(Creator("Varga", "Ada", False, "author"),),
         attachments=(Attachment("application/pdf", path, "main.pdf"),),
         collection_ids=(),
         tags=(),
@@ -98,18 +98,18 @@ def test_two_entries_for_merged_item_stem_wins(tmp_path):
     library, merged = merged_library(tmp_path)
     bib = existing_bib(
         tmp_path,
-        ("kapteyn_toward_nodate-1", same_pdf()),
-        ("kapteyn_toward_nodate", same_pdf()),
+        ("varga_toward_nodate-1", same_pdf()),
+        ("varga_toward_nodate", same_pdf()),
     )
     result = bootstrap(bib, library, merged)
-    assert result.lock == {SURVIVOR: "kapteyn_toward_nodate"}
-    assert result.dropped == ("kapteyn_toward_nodate-1",)
+    assert result.lock == {SURVIVOR: "varga_toward_nodate"}
+    assert result.dropped == ("varga_toward_nodate-1",)
 
 
 @pytest.mark.parametrize(
     ("citekeys", "frozen"),
     [
-        (("kapteyn_twin_2020-2", "smith_twin", "kapteyn_twin_2020-1"), "smith_twin"),
+        (("varga_twin_2020-2", "smith_twin", "varga_twin_2020-1"), "smith_twin"),
         (("b_twin", "a_twin-1", "a_twin"), "a_twin"),
     ],
 )
@@ -132,7 +132,7 @@ def test_all_suffixed_smallest_wins(tmp_path):
 
 def test_dropped_citekey_is_not_checked_but_frozen_one_is(tmp_path):
     library, merged = merged_library(tmp_path)
-    bib = existing_bib(tmp_path, ("kapteyn_toward_nodate", same_pdf()), ("a:b", same_pdf()))
+    bib = existing_bib(tmp_path, ("varga_toward_nodate", same_pdf()), ("a:b", same_pdf()))
     assert bootstrap(bib, library, merged).dropped == ("a:b",)
     bib = existing_bib(tmp_path, ("a:b", same_pdf()), ("a:b-1", same_pdf()))
     with pytest.raises(BootstrapRefused, match="'a:b'.*contains ':'"):
@@ -143,17 +143,17 @@ def test_two_entries_for_plain_item_still_refused(tmp_path):
     library = plain_library(item(tmp_path, "AAAA1111", "Toward a Twin"))
     bib = existing_bib(
         tmp_path,
-        ("kapteyn_toward_nodate", same_pdf()),
-        ("kapteyn_toward_nodate-1", same_pdf()),
+        ("varga_toward_nodate", same_pdf()),
+        ("varga_toward_nodate-1", same_pdf()),
     )
-    with pytest.raises(BootstrapRefused, match="claimed by entries kapteyn_toward_nodate, kap"):
+    with pytest.raises(BootstrapRefused, match="claimed by entries varga_toward_nodate, var"):
         bootstrap(bib, library, {"zotero:user/BBBB2222"})
 
 
 def test_duplicate_citekey_in_bibliography_still_refused(tmp_path):
     library, merged = merged_library(tmp_path)
     bib = existing_bib(
-        tmp_path, ("kapteyn_toward_nodate", same_pdf()), ("kapteyn_toward_nodate", same_pdf())
+        tmp_path, ("varga_toward_nodate", same_pdf()), ("varga_toward_nodate", same_pdf())
     )
-    with pytest.raises(BootstrapRefused, match="duplicate citekey kapteyn_toward_nodate"):
+    with pytest.raises(BootstrapRefused, match="duplicate citekey varga_toward_nodate"):
         bootstrap(bib, library, merged)

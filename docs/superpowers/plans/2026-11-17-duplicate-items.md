@@ -78,8 +78,8 @@ def test_custom_survivor_rule_is_used(): ...            # pass lambda items: max
 def test_title_breaks_non_duplicate_tie(tmp_path): ...       # one PDF on two items with different titles → entry goes to its title's item
 def test_title_tie_unresolved_is_ambiguous(tmp_path): ...    # no or several title matches → BootstrapRefused "ambiguous"
 def test_two_entries_for_merged_item_stem_wins(tmp_path):
-    # survivor's key_stem == "kapteyn_toward_nodate"; entries "kapteyn_toward_nodate-1" and "kapteyn_toward_nodate"
-    assert result.lock == {survivor_id: "kapteyn_toward_nodate"} and result.dropped == ("kapteyn_toward_nodate-1",)
+    # survivor's key_stem == "varga_toward_nodate"; entries "varga_toward_nodate-1" and "varga_toward_nodate"
+    assert result.lock == {survivor_id: "varga_toward_nodate"} and result.dropped == ("varga_toward_nodate-1",)
 def test_three_entries_unsuffixed_wins(tmp_path): ...        # none equals the stem → the one without -N; two dropped
 def test_all_suffixed_smallest_wins(tmp_path): ...
 def test_two_entries_for_plain_item_still_refused(tmp_path): ...

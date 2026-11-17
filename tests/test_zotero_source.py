@@ -24,7 +24,7 @@ def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     fx.add_item(
         "ITEMAAAA",
         fields={"title": "A Twin", "date": "2024-02-01"},
-        creators=[("Richstein", "Rebecca", "author")],
+        creators=[("Ostrander", "Ingrid", "author")],
         pdfs=[("a.pdf", b"%PDF-1")],
         collections=["COLLBBBB"],
         tags=["twin"],
@@ -34,7 +34,7 @@ def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     assert item.item_id == "zotero:user/ITEMAAAA"
     assert item.item_type == "journalArticle"
     assert item.fields["title"] == "A Twin"
-    assert item.creators == (Creator("Richstein", "Rebecca", False, "author"),)
+    assert item.creators == (Creator("Ostrander", "Ingrid", False, "author"),)
     assert item.collection_ids == ("zotero:user/COLLBBBB",)
     assert item.tags == ("twin",)
     assert item.attachments[0].path.name == "a.pdf" and item.attachments[0].path.exists()

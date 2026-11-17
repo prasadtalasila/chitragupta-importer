@@ -4,7 +4,7 @@ import shutil
 from dataclasses import replace
 
 import pytest
-from run_fixture import NEWER, OLDER, RICHSTEIN, SMITH, build, existing_bibliography, snapshot
+from run_fixture import NEWER, OLDER, OSTRANDER, SMITH, build, existing_bibliography, snapshot
 
 from chitragupta_importer.run import DuplicatesFound, ImportRefused, format_summary, import_zotero
 
@@ -20,7 +20,7 @@ PLATFORMS_COPY = {
     "pdfs": [],
 }
 URL = "https://example.org/twins"
-TWINS_PAPER = {**RICHSTEIN, "fields": {"title": "Twins, part one", "date": "2024", "url": URL}}
+TWINS_PAPER = {**OSTRANDER, "fields": {"title": "Twins, part one", "date": "2024", "url": URL}}
 TWINS_REPORT = {
     **SMITH,
     "item_type": "report",
@@ -37,7 +37,7 @@ def twins_bib(tmp_path):
 
 def test_duplicates_without_flag_refuse_and_list(tmp_path):
     out = tmp_path / "out"
-    import_zotero(build(tmp_path / "v1", RICHSTEIN), out)
+    import_zotero(build(tmp_path / "v1", OSTRANDER), out)
     before = snapshot(out)
     data_dir = build(tmp_path / "v2", NEWER, OLDER, PLATFORMS, PLATFORMS_COPY)
     with pytest.raises(DuplicatesFound) as refused:
@@ -45,8 +45,8 @@ def test_duplicates_without_flag_refuse_and_list(tmp_path):
     assert isinstance(refused.value, ImportRefused)
     assert str(refused.value) == (
         "2 duplicate groups found; rerun with --merge-duplicates to merge them\n"
-        "duplicate group: zotero:user/AAAA1111 (Characterizing the Digital Twin), "
-        "zotero:user/BBBB2222 (Characterizing the digital twin)\n"
+        "duplicate group: zotero:user/AAAA1111 (Calibrating the Digital Twin), "
+        "zotero:user/BBBB2222 (Calibrating the digital twin)\n"
         "duplicate group: zotero:user/CCCC3333 (Digital Platforms), "
         "zotero:user/DDDD4444 (Digital platforms)"
     )
@@ -76,12 +76,12 @@ def test_merge_flag_merges(tmp_path):
     summary = import_zotero(build(tmp_path, with_pdf, without_pdf), out, merge_duplicates=True)
     assert summary.duplicates == {"zotero:user/AAAA1111": "zotero:user/BBBB2222"}
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/BBBB2222\trichstein_characterizing_2024\n"
+        "zotero:user/BBBB2222\tostrander_calibrating_2024\n"
     )
 
 
 def test_no_duplicates_flag_irrelevant(tmp_path):
-    data_dir = build(tmp_path, RICHSTEIN, SMITH)
+    data_dir = build(tmp_path, OSTRANDER, SMITH)
     plain = import_zotero(data_dir, tmp_path / "plain")
     flagged = import_zotero(data_dir, tmp_path / "flagged", merge_duplicates=True)
     assert plain == flagged
@@ -90,11 +90,11 @@ def test_no_duplicates_flag_irrelevant(tmp_path):
 
 def test_dry_run_writes_nothing(tmp_path):
     out, real = tmp_path / "out", tmp_path / "real"
-    import_zotero(build(tmp_path / "v1", RICHSTEIN), out)
+    import_zotero(build(tmp_path / "v1", OSTRANDER), out)
     (out / "files" / "stray.pdf").write_bytes(b"%PDF-9")
     shutil.copytree(out, real)
     before = snapshot(out)
-    data_dir = build(tmp_path / "v2", RICHSTEIN, SMITH)
+    data_dir = build(tmp_path / "v2", OSTRANDER, SMITH)
     summary = import_zotero(data_dir, out, dry_run=True)
     assert snapshot(out) == before
     expected = import_zotero(data_dir, real)
@@ -104,14 +104,14 @@ def test_dry_run_writes_nothing(tmp_path):
 
 
 def test_dry_run_creates_nothing(tmp_path):
-    out, data_dir = tmp_path / "out", build(tmp_path, RICHSTEIN)
+    out, data_dir = tmp_path / "out", build(tmp_path, OSTRANDER)
     before = sorted(tmp_path.rglob("*"))
     bib = existing_bibliography(tmp_path)
     summary = import_zotero(data_dir, out, bootstrap_from=bib, dry_run=True)
     assert not out.exists()
     assert sorted(tmp_path.rglob("*")) == sorted([*before, bib.parent, bib])
     assert summary.included == 1
-    assert summary.bootstrap.lock == {"zotero:user/AAAA1111": "rr2024"}
+    assert summary.bootstrap.lock == {"zotero:user/AAAA1111": "io2024"}
 
 
 def test_dry_run_without_flag_still_lists_and_fails(tmp_path):
@@ -121,7 +121,7 @@ def test_dry_run_without_flag_still_lists_and_fails(tmp_path):
 
 
 def test_dry_run_still_refuses_bootstrap_with_existing_lock(tmp_path):
-    out, data_dir = tmp_path / "out", build(tmp_path, RICHSTEIN)
+    out, data_dir = tmp_path / "out", build(tmp_path, OSTRANDER)
     import_zotero(data_dir, out)
     with pytest.raises(ImportRefused, match="citekeys.lock"):
         import_zotero(data_dir, out, existing_bibliography(tmp_path), dry_run=True)

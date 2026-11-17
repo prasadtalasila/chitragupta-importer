@@ -31,7 +31,7 @@ def test_unsafe(key):
 
 
 @pytest.mark.parametrize(
-    "key", ["lehner_pattern_2023-1", "con_x_2020", "com10", "lpt0", "a.b", "a\x7fb"]
+    "key", ["dorsey_pattern_2023-1", "con_x_2020", "com10", "lpt0", "a.b", "a\x7fb"]
 )
 def test_safe(key):
     assert citekey_problem(key) is None
@@ -48,10 +48,10 @@ def test_unsafe_citekey_is_a_value_error():
 
 def test_stem_shape():
     it = item(
-        creators=[("Schröder", "Kai", "author")],
-        fields={"title": "The Characterizing of Twins", "date": "2024-02"},
+        creators=[("Köhler", "Jan", "author")],
+        fields={"title": "The Calibrating of Twins", "date": "2024-02"},
     )
-    assert key_stem(it) == "schroder_characterizing_2024"
+    assert key_stem(it) == "kohler_calibrating_2024"
 
 
 def test_stem_with_nothing():
@@ -65,8 +65,8 @@ def test_stem_takes_first_creator_whatever_its_role():
 
 
 def test_stem_uses_first_creator_of_any_role_when_no_author():
-    it = item(creators=[("Müller", "Jan", "editor"), ("Other", "X", "editor")])
-    assert key_stem(it) == "muller__nodate"
+    it = item(creators=[("Mäder", "Jan", "editor"), ("Other", "X", "editor")])
+    assert key_stem(it) == "mader__nodate"
 
 
 def test_stem_single_field_creator():

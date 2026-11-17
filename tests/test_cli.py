@@ -36,8 +36,8 @@ def zotero_data_dir(tmp_path, schema_version=121):
     fixture = ZoteroFixture(tmp_path)
     fixture.add_item(
         "AAAA1111",
-        fields={"title": "Characterizing the Digital Twin", "date": "2024"},
-        creators=[("Richstein", "Rebecca", "author")],
+        fields={"title": "Calibrating the Digital Twin", "date": "2024"},
+        creators=[("Ostrander", "Ingrid", "author")],
         pdfs=[("paper.pdf", b"%PDF-1")],
     )
     return fixture.build(schema_version)
@@ -49,12 +49,12 @@ def test_zotero_command_prints_summary(tmp_path):
     result = CliRunner().invoke(main, ["zotero", "--data-dir", str(data_dir), "--out", str(out)])
     assert result.exit_code == 0, result.output
     assert result.stdout == "included: 1\nnew citekeys: 1\nunreferenced files: 0\n"
-    assert (out / "files" / "richstein_characterizing_2024.pdf").is_file()
+    assert (out / "files" / "ostrander_calibrating_2024.pdf").is_file()
 
 
 def test_zotero_command_bootstrap_option(tmp_path):
     existing = tmp_path / "references.bib"
-    existing.write_text("@article{rr,\n  title = {Characterizing the digital twin},\n}\n")
+    existing.write_text("@article{io,\n  title = {Calibrating the digital twin},\n}\n")
     args = ["zotero", "--data-dir", str(zotero_data_dir(tmp_path)), "--out", str(tmp_path / "o")]
     result = CliRunner().invoke(main, [*args, "--bootstrap", str(existing)])
     assert result.exit_code == 0, result.output

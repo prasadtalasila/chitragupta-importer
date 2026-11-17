@@ -266,8 +266,8 @@ sorted by collection id, UTF-8, LF, tab-separated:
 
 ```text
 <collection id>\t<parent collection id or ->\t<segment slug>\t<name>\t<live|retired>
-zotero:user/47U7HA7G\t-\tdigital-twin\tDigital Twin\tlive
-zotero:user/EQ853ET5\tzotero:user/<DT Platforms id>\tperformance-measurements\tPerformance Measurements\tlive
+zotero:user/DTWN0001\t-\tdigital-twin\tDigital Twin\tlive
+zotero:user/PERF0002\tzotero:user/<DT Platforms id>\tperformance-measurements\tPerformance Measurements\tlive
 ```
 
 Each run compares the library with the lock and reports, per

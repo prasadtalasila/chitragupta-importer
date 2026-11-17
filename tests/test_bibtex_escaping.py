@@ -27,7 +27,7 @@ def test_specials_escaped():
         ),
         ("ZEPHYR: A Toolkit", "{ZEPHYR}: {A} {Toolkit}"),
         ("(Co-)Design", "({Co}-){Design}"),
-        ("Schröder's Ünits", "Schröder's {Ünits}"),
+        ("Köhler's Ünits", "Köhler's {Ünits}"),
         ("5G and R&D", "{5G} and {R}\\&{D}"),
         ("Foo_Bar x|Y", "Foo\\_{Bar} x{\\textbar}{Y}"),
     ],

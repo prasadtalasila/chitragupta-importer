@@ -18,13 +18,13 @@ def item(item_type="journalArticle", creators=(), tags=(), **fields):
 
 def article_item():
     return item(
-        title="Characterizing the Digital Twin",
+        title="Calibrating the Digital Twin",
         volume="8",
-        DOI="10.3390/designs8010008",
-        publicationTitle="Designs",
+        DOI="10.9999/fictional.2024.0008",
+        publicationTitle="Fictional Twins",
         date="2024-02-00 2024/2",
         pages="8",
-        creators=[author("Richstein", "Rebecca"), author("Schröder", "Kai-Uwe")],
+        creators=[author("Ostrander", "Ingrid"), author("Köhler", "Jan-Ole")],
         tags=["design", "digital twin"],
     )
 
@@ -35,21 +35,19 @@ def fields_of(text):
 
 
 def test_article_entry_exact():
-    text = render_entry(
-        "richstein_characterizing_2024", article_item(), ["digital-twin.dt-platforms"]
-    )
+    text = render_entry("ostrander_calibrating_2024", article_item(), ["digital-twin.dt-platforms"])
     assert text == (
-        "@article{richstein_characterizing_2024,\n"
-        "\ttitle = {Characterizing the {Digital} {Twin}},\n"
+        "@article{ostrander_calibrating_2024,\n"
+        "\ttitle = {Calibrating the {Digital} {Twin}},\n"
         "\tvolume = {8},\n"
-        "\tdoi = {10.3390/designs8010008},\n"
-        "\tjournal = {Designs},\n"
-        "\tauthor = {Richstein, Rebecca and Schröder, Kai-Uwe},\n"
+        "\tdoi = {10.9999/fictional.2024.0008},\n"
+        "\tjournal = {Fictional Twins},\n"
+        "\tauthor = {Ostrander, Ingrid and Köhler, Jan-Ole},\n"
         "\tmonth = feb,\n"
         "\tyear = {2024},\n"
         "\tkeywords = {design, digital twin},\n"
         "\tpages = {8},\n"
-        "\tfile = {Full Text PDF:files/richstein_characterizing_2024.pdf:application/pdf},\n"
+        "\tfile = {Full Text PDF:files/ostrander_calibrating_2024.pdf:application/pdf},\n"
         "\tcg-collections = {digital-twin.dt-platforms},\n"
         "}\n"
     )

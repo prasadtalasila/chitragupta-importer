@@ -13,8 +13,8 @@ def existing_with_two_keys(tmp_path):
     path.parent.mkdir()
     path.write_text(
         "".join(
-            f"@article{{{key},\n  title = {{Characterizing the digital twin}},\n}}\n"
-            for key in ("richstein_characterizing_2024-1", "richstein_characterizing_2024")
+            f"@article{{{key},\n  title = {{Calibrating the digital twin}},\n}}\n"
+            for key in ("ostrander_calibrating_2024-1", "ostrander_calibrating_2024")
         ),
         encoding="utf-8",
     )
@@ -27,7 +27,7 @@ def test_duplicates_merged_before_import(tmp_path):
     assert summary.included == 1
     assert summary.duplicates == {"zotero:user/BBBB2222": "zotero:user/AAAA1111"}
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/AAAA1111\trichstein_characterizing_2024\n"
+        "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
     )
     assert (out / "bibliography.bib").read_text(encoding="utf-8").count("@article{") == 1
     assert format_summary(summary) == (
@@ -39,13 +39,13 @@ def test_bootstrap_with_duplicates_freezes_one_key(tmp_path):
     out = tmp_path / "out"
     data_dir = build(tmp_path, NEWER, OLDER)
     summary = import_zotero(data_dir, out, existing_with_two_keys(tmp_path), merge_duplicates=True)
-    assert summary.bootstrap.dropped == ("richstein_characterizing_2024-1",)
+    assert summary.bootstrap.dropped == ("ostrander_calibrating_2024-1",)
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/AAAA1111\trichstein_characterizing_2024\n"
+        "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
     )
     assert format_summary(summary).endswith(
         "bootstrap: matched 1, unmatched 0, ambiguous 0, not included 0, dropped 1\n"
-        "dropped citekey: richstein_characterizing_2024-1\n"
+        "dropped citekey: ostrander_calibrating_2024-1\n"
     )
 
 

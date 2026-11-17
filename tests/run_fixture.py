@@ -2,10 +2,10 @@
 
 from zotero_fixture import ZoteroFixture
 
-RICHSTEIN = {
+OSTRANDER = {
     "key": "AAAA1111",
-    "fields": {"title": "Characterizing the Digital Twin", "date": "2024"},
-    "creators": [("Richstein", "Rebecca", "author")],
+    "fields": {"title": "Calibrating the Digital Twin", "date": "2024"},
+    "creators": [("Ostrander", "Ingrid", "author")],
     "pdfs": [("paper.pdf", b"%PDF-1")],
     "collections": ["COLL0001"],
 }
@@ -17,11 +17,11 @@ SMITH = {
 }
 
 # Two copies of one paper: the same title up to case and a shared PDF.
-OLDER = {**RICHSTEIN, "date_added": "2019-01-01 00:00:00"}
+OLDER = {**OSTRANDER, "date_added": "2019-01-01 00:00:00"}
 NEWER = {
-    **RICHSTEIN,
+    **OSTRANDER,
     "key": "BBBB2222",
-    "fields": {"title": "Characterizing the digital twin", "date": "2024"},
+    "fields": {"title": "Calibrating the digital twin", "date": "2024"},
     "pdfs": [("copy.pdf", b"%PDF-1")],
     "date_added": "2020-01-01 00:00:00",
 }
@@ -48,7 +48,7 @@ def existing_bibliography(tmp_path):
     path = tmp_path / "existing" / "references.bib"
     path.parent.mkdir()
     path.write_text(
-        "@article{rr2024,\n  title = {Characterizing the digital twin},\n}\n"
+        "@article{io2024,\n  title = {Calibrating the digital twin},\n}\n"
         "@article{lost,\n  title = {Nowhere},\n}\n",
         encoding="utf-8",
     )

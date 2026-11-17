@@ -1,6 +1,6 @@
 """The import run: reading a library and writing the papers directory."""
 
-from run_fixture import RICHSTEIN, SMITH, build, existing_bibliography, snapshot
+from run_fixture import OSTRANDER, SMITH, build, existing_bibliography, snapshot
 
 from chitragupta_importer.bootstrap import BootstrapResult
 from chitragupta_importer.run import RunSummary, format_summary, import_zotero
@@ -8,28 +8,28 @@ from chitragupta_importer.run import RunSummary, format_summary, import_zotero
 
 def test_writes_papers_directory(tmp_path):
     out = tmp_path / "out"
-    summary = import_zotero(build(tmp_path, RICHSTEIN), out)
+    summary = import_zotero(build(tmp_path, OSTRANDER), out)
     assert sorted(p.name for p in out.iterdir()) == [
         "bibliography.bib",
         "citekeys.lock",
         "collections.lock",
         "files",
     ]
-    assert (out / "files" / "richstein_characterizing_2024.pdf").read_bytes() == b"%PDF-1"
+    assert (out / "files" / "ostrander_calibrating_2024.pdf").read_bytes() == b"%PDF-1"
     bib = (out / "bibliography.bib").read_text(encoding="utf-8")
     assert bib.startswith("@comment{cg-collections v1\ndigital-twin\tDigital Twin\n}\n\n@article{")
     assert "\tcg-collections = {digital-twin},\n" in bib
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/AAAA1111\trichstein_characterizing_2024\n"
+        "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
     )
     assert summary.included == 1
-    assert summary.new_citekeys == ("richstein_characterizing_2024",)
+    assert summary.new_citekeys == ("ostrander_calibrating_2024",)
     assert summary.collection_changes == ("new digital-twin",)
     assert summary.bootstrap is None
 
 
 def test_second_run_is_byte_identical(tmp_path):
-    data_dir, out = build(tmp_path, RICHSTEIN, SMITH), tmp_path / "out"
+    data_dir, out = build(tmp_path, OSTRANDER, SMITH), tmp_path / "out"
     import_zotero(data_dir, out)
     first = snapshot(out)
     summary = import_zotero(data_dir, out)
@@ -39,10 +39,10 @@ def test_second_run_is_byte_identical(tmp_path):
 
 def test_adding_an_item_changes_only_its_lines(tmp_path):
     out = tmp_path / "out"
-    import_zotero(build(tmp_path / "v1", RICHSTEIN), out)
+    import_zotero(build(tmp_path / "v1", OSTRANDER), out)
     bib_before = (out / "bibliography.bib").read_text(encoding="utf-8")
     lock_before = (out / "citekeys.lock").read_text(encoding="utf-8")
-    import_zotero(build(tmp_path / "v2", RICHSTEIN, SMITH), out)
+    import_zotero(build(tmp_path / "v2", OSTRANDER, SMITH), out)
     bib_after = (out / "bibliography.bib").read_text(encoding="utf-8")
     lock_after = (out / "citekeys.lock").read_text(encoding="utf-8")
     assert bib_after.startswith(bib_before)
@@ -55,7 +55,7 @@ def test_left_out_items_reported_by_reason(tmp_path):
     no_attachment = {"key": "CCCC3333", "fields": {"title": "Bare"}}
     missing = {"key": "DDDD4444", "pdfs": [("gone.pdf", None)]}
     missing_too = {"key": "EEEE5555", "pdfs": [("gone.pdf", None)]}
-    data_dir = build(tmp_path, RICHSTEIN, missing_too, no_attachment, missing)
+    data_dir = build(tmp_path, OSTRANDER, missing_too, no_attachment, missing)
     summary = import_zotero(data_dir, tmp_path / "out")
     assert summary.included == 1
     assert summary.left_out == {
@@ -67,25 +67,25 @@ def test_left_out_items_reported_by_reason(tmp_path):
 
 def test_dormant_key_returns(tmp_path):
     out = tmp_path / "out"
-    import_zotero(build(tmp_path / "v1", RICHSTEIN, SMITH), out)
+    import_zotero(build(tmp_path / "v1", OSTRANDER, SMITH), out)
     lock = (out / "citekeys.lock").read_text(encoding="utf-8")
     without_pdf = {**SMITH, "pdfs": [("smith.pdf", None)]}
-    summary = import_zotero(build(tmp_path / "v2", RICHSTEIN, without_pdf), out)
+    summary = import_zotero(build(tmp_path / "v2", OSTRANDER, without_pdf), out)
     assert summary.left_out == {"PDF missing on disk": ("zotero:user/BBBB2222",)}
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == lock
     assert "smith_digital_2020" not in (out / "bibliography.bib").read_text(encoding="utf-8")
     assert summary.unreferenced == ("smith_digital_2020.pdf",)
     assert (out / "files" / "smith_digital_2020.pdf").exists()
-    summary = import_zotero(build(tmp_path / "v3", RICHSTEIN, SMITH), out)
+    summary = import_zotero(build(tmp_path / "v3", OSTRANDER, SMITH), out)
     assert "@article{smith_digital_2020," in (out / "bibliography.bib").read_text(encoding="utf-8")
     assert summary.new_citekeys == summary.unreferenced == ()
 
 
 def test_retired_key_not_reused(tmp_path):
     out = tmp_path / "out"
-    import_zotero(build(tmp_path / "v1", RICHSTEIN, SMITH), out)
+    import_zotero(build(tmp_path / "v1", OSTRANDER, SMITH), out)
     same_stem = {**SMITH, "key": "CCCC3333"}
-    summary = import_zotero(build(tmp_path / "v2", RICHSTEIN, same_stem), out)
+    summary = import_zotero(build(tmp_path / "v2", OSTRANDER, same_stem), out)
     assert summary.new_citekeys == ("smith_digital_2020-1",)
     lock = (out / "citekeys.lock").read_text(encoding="utf-8")
     assert "zotero:user/BBBB2222\tsmith_digital_2020\n" in lock
@@ -94,20 +94,20 @@ def test_retired_key_not_reused(tmp_path):
 
 def test_bootstrap_freezes_existing_keys(tmp_path):
     out = tmp_path / "out"
-    data_dir = build(tmp_path, RICHSTEIN, SMITH)
+    data_dir = build(tmp_path, OSTRANDER, SMITH)
     summary = import_zotero(data_dir, out, bootstrap_from=existing_bibliography(tmp_path))
     assert summary.bootstrap == BootstrapResult(
-        {"zotero:user/AAAA1111": "rr2024"}, ("lost",), (), ()
+        {"zotero:user/AAAA1111": "io2024"}, ("lost",), (), ()
     )
     assert summary.new_citekeys == ("smith_digital_2020",)
-    assert (out / "files" / "rr2024.pdf").read_bytes() == b"%PDF-1"
+    assert (out / "files" / "io2024.pdf").read_bytes() == b"%PDF-1"
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/AAAA1111\trr2024\nzotero:user/BBBB2222\tsmith_digital_2020\n"
+        "zotero:user/AAAA1111\tio2024\nzotero:user/BBBB2222\tsmith_digital_2020\n"
     )
 
 
 def test_nothing_written_outside_out(tmp_path):
-    data_dir = build(tmp_path, RICHSTEIN, SMITH)
+    data_dir = build(tmp_path, OSTRANDER, SMITH)
     data_before = snapshot(data_dir)
     outside_before = set(tmp_path.rglob("*"))
     out = tmp_path / "out"
