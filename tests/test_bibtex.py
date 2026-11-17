@@ -35,7 +35,7 @@ def fields_of(text):
 
 
 def test_article_entry_exact():
-    text = render_entry("ostrander_calibrating_2024", article_item(), ["digital-twin.dt-platforms"])
+    text = render_entry("ostrander_calibrating_2024", article_item(), ["tide-pools.tp-gauges"])
     assert text == (
         "@article{ostrander_calibrating_2024,\n"
         "\ttitle = {Calibrating the {Digital} {Twin}},\n"
@@ -48,7 +48,7 @@ def test_article_entry_exact():
         "\tkeywords = {design, digital twin},\n"
         "\tpages = {8},\n"
         "\tfile = {Full Text PDF:files/ostrander_calibrating_2024.pdf:application/pdf},\n"
-        "\tcg-collections = {digital-twin.dt-platforms},\n"
+        "\tcg-collections = {tide-pools.tp-gauges},\n"
         "}\n"
     )
 

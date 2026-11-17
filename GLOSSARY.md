@@ -142,7 +142,7 @@ collection.
 
 **Slug path**:
 The segment slugs of a collection and its ancestors, from the root, joined
-by `.`, such as `digital-twin.dt-platforms`.
+by `.`, such as `tide-pools.tp-gauges`.
 _Avoid_: collection path, group path
 
 **Collection lock**:
@@ -161,7 +161,7 @@ never written, always derived from slug paths.
 
 **Display path**:
 The names of a collection and its ancestors, from the root, joined by
-` / `, such as `Digital Twin / DT Platforms`; only shown or matched whole,
+` / `, such as `Tide Pools / TP Gauges`; only shown or matched whole,
 never split back into names.
 _Avoid_: collection path, full name
 

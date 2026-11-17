@@ -31,7 +31,7 @@ def test_duplicates_merged_before_import(tmp_path):
     )
     assert (out / "bibliography.bib").read_text(encoding="utf-8").count("@article{") == 1
     assert format_summary(summary) == (
-        f"included: 1\n{DUPLICATE_LINE}new citekeys: 1\nnew digital-twin\nunreferenced files: 0\n"
+        f"included: 1\n{DUPLICATE_LINE}new citekeys: 1\nnew tide-pools\nunreferenced files: 0\n"
     )
 
 

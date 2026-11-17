@@ -83,8 +83,8 @@ scripts/check_zotero_data.py   by-hand checks against the Zotero data
 ```python
 def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     fx = ZoteroFixture(tmp_path)
-    fx.add_collection("COLLAAAA", "Digital Twin")
-    fx.add_collection("COLLBBBB", "DT Platforms", parent_key="COLLAAAA")
+    fx.add_collection("COLLAAAA", "Tide Pools")
+    fx.add_collection("COLLBBBB", "TP Gauges", parent_key="COLLAAAA")
     fx.add_item("ITEMAAAA", fields={"title": "A Twin", "date": "2024-02-01"},
                 creators=[("Ostrander", "Ingrid", "author")],
                 pdfs=[("a.pdf", b"%PDF-1")], collections=["COLLBBBB"], tags=["twin"])
@@ -96,7 +96,7 @@ def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     assert item.collection_ids == ("zotero:user/COLLBBBB",)
     assert item.tags == ("twin",)
     assert item.attachments[0].path.name == "a.pdf" and item.attachments[0].path.exists()
-    assert lib.collections[1] == Collection("zotero:user/COLLBBBB", "zotero:user/COLLAAAA", "DT Platforms")
+    assert lib.collections[1] == Collection("zotero:user/COLLBBBB", "zotero:user/COLLAAAA", "TP Gauges")
 
 def test_skips_deleted_items_and_collections(tmp_path): ...   # deleted=True on both → absent
 def test_refuses_unknown_schema(tmp_path):                     # build(schema_version=122)
@@ -257,7 +257,7 @@ def test_ambiguous_entry_refuses(tmp_path):   # one entry matches two items at i
     with pytest.raises(BootstrapRefused, match="ambiguous"): ...
 def test_item_claimed_by_two_entries_refuses(tmp_path): ...
 def test_matched_item_without_pdf_gets_no_lock_line(tmp_path):
-    assert result.not_included == ("varga_toward_nodate",) and result.lock == {}
+    assert result.not_included == ("abernathy_toward_nodate",) and result.lock == {}
 def test_unsafe_frozen_key_refuses(tmp_path): ...   # entry key "a:b"
 ```
 
@@ -288,21 +288,21 @@ def test_unsafe_frozen_key_refuses(tmp_path): ...   # entry key "a:b"
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-@pytest.mark.parametrize("name,slug", [("Digital Twin", "digital-twin"), ("Industry 5.0", "industry-5-0"),
-    ("Köhler & Co", "kohler-co"), ("Edge/Cloud", "edge-cloud"), ("***", "collection")])
+@pytest.mark.parametrize("name,slug", [("Tide Pools", "tide-pools"), ("Phase 2.0", "phase-2-0"),
+    ("Köhler & Co", "kohler-co"), ("Ebb/Flow", "ebb-flow"), ("***", "collection")])
 def test_segment_slug(name, slug): assert segment_slug(name) == slug
 
 def test_ancestors_of_used_collections_are_recorded(): ...
 def test_collection_holding_only_left_out_items_gets_no_record(): ...
 def test_rename_keeps_slug_and_reports():
-    # lock has COLL-B "Plants DT"/"plants-dt"; library renames it "Plant Digital Twins"
-    assert new["zotero:user/B"].slug == "plants-dt"
-    assert "renamed Plants DT -> Plant Digital Twins" in changes
-def test_move_keeps_segment_and_changes_path(): ...   # "moved digital-twin.medical -> digital-twin.use-cases.medical-1"
-def test_sibling_clash_including_case(): ...          # "Datasets" and "datasets" under one parent → datasets, datasets-1 by collection ID
+    # lock has COLL-B "Kelp TP"/"kelp-tp"; library renames it "Kelp Tide Pools"
+    assert new["zotero:user/B"].slug == "kelp-tp"
+    assert "renamed Kelp TP -> Kelp Tide Pools" in changes
+def test_move_keeps_segment_and_changes_path(): ...   # "moved tide-pools.coral -> tide-pools.field-notes.coral-1"
+def test_sibling_clash_including_case(): ...          # "Logbooks" and "logbooks" under one parent → logbooks, logbooks-1 by collection ID
 def test_gone_collection_is_retired_and_kept(): ...
 def test_recreated_collection_takes_retired_slug(): ... # same parent, same name, new ID → retired slug reused
-def test_new_collection_reported(): ...                # "new digital-twin.dt-platforms"
+def test_new_collection_reported(): ...                # "new tide-pools.tp-gauges"
 def test_lock_round_trip(): ...
 def test_name_table_rows_cover_used_and_ancestors_only(): ...
 ```
@@ -328,7 +328,7 @@ def test_name_table_rows_cover_used_and_ancestors_only(): ...
 
 ```python
 def test_article_entry_exact():
-    text = render_entry("ostrander_calibrating_2024", article_item(), ["digital-twin.dt-platforms"])
+    text = render_entry("ostrander_calibrating_2024", article_item(), ["tide-pools.tp-gauges"])
     assert text == (
         "@article{ostrander_calibrating_2024,\n"
         "\ttitle = {Calibrating the {Digital} {Twin}},\n"
@@ -341,7 +341,7 @@ def test_article_entry_exact():
         "\tkeywords = {design, digital twin},\n"
         "\tpages = {8},\n"
         "\tfile = {Full Text PDF:files/ostrander_calibrating_2024.pdf:application/pdf},\n"
-        "\tcg-collections = {digital-twin.dt-platforms},\n"
+        "\tcg-collections = {tide-pools.tp-gauges},\n"
         "}\n")
 @pytest.mark.parametrize("zotero_type,bibtex_type", [("journalArticle", "article"), ("conferencePaper", "inproceedings"),
     ("bookSection", "incollection"), ("book", "book"), ("report", "techreport"), ("thesis", "phdthesis"),
@@ -353,8 +353,8 @@ def test_specials_round_trip():
     # title "50% of {A} & B_c #1", collection name with "{" → bibtexparser parses the bibliography back,
     # title value equal after unescaping, name table braces balanced
     ...
-def test_name_table_block(): assert render_name_table([("digital-twin", "Digital Twin")]) == \
-    "@comment{cg-collections v1\ndigital-twin\tDigital Twin\n}\n"
+def test_name_table_block(): assert render_name_table([("tide-pools", "Tide Pools")]) == \
+    "@comment{cg-collections v1\ntide-pools\tTide Pools\n}\n"
 def test_name_table_escapes_braces(): ...   # "A {B}" → "A \\{B\\}"
 def test_bibliography_is_name_table_then_entries_blank_line_separated(): ...
 ```

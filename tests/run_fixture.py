@@ -27,7 +27,7 @@ NEWER = {
 }
 
 
-def build(root, *items, schema_version=121, collections=(("COLL0001", "Digital Twin"),)):
+def build(root, *items, schema_version=121, collections=(("COLL0001", "Tide Pools"),)):
     """Build a Zotero data directory under `root` holding `items` (dicts of add_item kwargs)."""
     fixture = ZoteroFixture(root)
     for key, name in collections:

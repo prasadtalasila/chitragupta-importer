@@ -19,8 +19,8 @@ def _set_attachment_path(data_dir, path):
 
 def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     fx = ZoteroFixture(tmp_path)
-    fx.add_collection("COLLAAAA", "Digital Twin")
-    fx.add_collection("COLLBBBB", "DT Platforms", parent_key="COLLAAAA")
+    fx.add_collection("COLLAAAA", "Tide Pools")
+    fx.add_collection("COLLBBBB", "TP Gauges", parent_key="COLLAAAA")
     fx.add_item(
         "ITEMAAAA",
         fields={"title": "A Twin", "date": "2024-02-01"},
@@ -39,9 +39,9 @@ def test_reads_item_fields_creators_tags_and_collections(tmp_path):
     assert item.tags == ("twin",)
     assert item.attachments[0].path.name == "a.pdf" and item.attachments[0].path.exists()
     assert item.attachments[0].content_type == "application/pdf"
-    assert lib.collections[0] == Collection("zotero:user/COLLAAAA", None, "Digital Twin")
+    assert lib.collections[0] == Collection("zotero:user/COLLAAAA", None, "Tide Pools")
     assert lib.collections[1] == Collection(
-        "zotero:user/COLLBBBB", "zotero:user/COLLAAAA", "DT Platforms"
+        "zotero:user/COLLBBBB", "zotero:user/COLLAAAA", "TP Gauges"
     )
     assert not lib.skipped_libraries
 

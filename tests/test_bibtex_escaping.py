@@ -95,8 +95,8 @@ def test_specials_round_trip():
 
 
 def test_name_table_block():
-    assert render_name_table([("digital-twin", "Digital Twin")]) == (
-        "@comment{cg-collections v1\ndigital-twin\tDigital Twin\n}\n"
+    assert render_name_table([("tide-pools", "Tide Pools")]) == (
+        "@comment{cg-collections v1\ntide-pools\tTide Pools\n}\n"
     )
 
 

@@ -17,14 +17,14 @@ def test_writes_papers_directory(tmp_path):
     ]
     assert (out / "files" / "ostrander_calibrating_2024.pdf").read_bytes() == b"%PDF-1"
     bib = (out / "bibliography.bib").read_text(encoding="utf-8")
-    assert bib.startswith("@comment{cg-collections v1\ndigital-twin\tDigital Twin\n}\n\n@article{")
-    assert "\tcg-collections = {digital-twin},\n" in bib
+    assert bib.startswith("@comment{cg-collections v1\ntide-pools\tTide Pools\n}\n\n@article{")
+    assert "\tcg-collections = {tide-pools},\n" in bib
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
         "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
     )
     assert summary.included == 1
     assert summary.new_citekeys == ("ostrander_calibrating_2024",)
-    assert summary.collection_changes == ("new digital-twin",)
+    assert summary.collection_changes == ("new tide-pools",)
     assert summary.bootstrap is None
 
 

@@ -238,9 +238,9 @@ scope.
 **Slugs.** Each collection has a *segment slug*: its name lower-cased,
 ASCII-folded, every run of characters outside `[a-z0-9]` replaced by
 one `-`, leading and trailing `-` trimmed (`collection` if nothing is
-left). `Industry 5.0` becomes `industry-5-0`. A collection's *slug
+left). `Phase 2.0` becomes `phase-2-0`. A collection's *slug
 path* joins the segment slugs from the root with `.`:
-`digital-twin.dt-platforms.execution.runner`. Slugs contain only
+`tide-pools.tp-gauges.mooring.anchor`. Slugs contain only
 `[a-z0-9-.]`, so they need no escaping and no shell quoting.
 
 **Freezing.** A segment slug is created once per collection id and
@@ -266,8 +266,8 @@ sorted by collection id, UTF-8, LF, tab-separated:
 
 ```text
 <collection id>\t<parent collection id or ->\t<segment slug>\t<name>\t<live|retired>
-zotero:user/DTWN0001\t-\tdigital-twin\tDigital Twin\tlive
-zotero:user/PERF0002\tzotero:user/<DT Platforms id>\tperformance-measurements\tPerformance Measurements\tlive
+zotero:user/TIDE0001\t-\ttide-pools\tTide Pools\tlive
+zotero:user/SALT0002\tzotero:user/<TP Gauges id>\tsalinity-readings\tSalinity Readings\tlive
 ```
 
 Each run compares the library with the lock and reports, per
@@ -280,7 +280,7 @@ collection the item is directly in, sorted, joined by `, `. Ancestors
 are implied and not listed (an item in `a.b.c` is in `a` and `a.b`).
 
 ```bibtex
-cg-collections = {digital-twin.dt-architectures, digital-twin.dt-platforms.execution.runner}
+cg-collections = {tide-pools.tp-layouts, tide-pools.tp-gauges.mooring.anchor}
 ```
 
 **The name table.** At the top of `bibliography.bib`, one comment block
@@ -291,10 +291,10 @@ parent rows, so names are never split and need no separator escaping):
 
 ```bibtex
 @comment{cg-collections v1
-digital-twin	Digital Twin
-digital-twin.dt-platforms	DT Platforms
-digital-twin.dt-platforms.execution	Execution
-digital-twin.dt-platforms.execution.runner	Runner
+tide-pools	Tide Pools
+tide-pools.tp-gauges	TP Gauges
+tide-pools.tp-gauges.mooring	Mooring
+tide-pools.tp-gauges.mooring.anchor	Anchor
 }
 ```
 
@@ -304,8 +304,7 @@ collection ids; those stay in the lock. (Name table in the bibliography rather
 than a sidecar: my call, so chitragupta reads only the bib.)
 
 **In the Zotero data.** 108 collections, depth up to 4, 99 distinct names
-ignoring case; 7 names reused in different branches (`Medical`,
-`Standards`, `Performance Measurements`, ...), which the slug paths keep
+ignoring case; 7 names reused in different branches, which the slug paths keep
 apart. One item sits in 4 collections. No name contains a tab, newline
 or brace.
 
