@@ -9,7 +9,8 @@ one survivor per group (the copy with its own PDF, else the oldest) and
 reports the rest. Bootstrap freezes the key of the entry that matched the
 survivor's own PDF and lists the other keys as dropped, so drafts citing
 them can be updated; `--dry-run` shows all of this before anything is
-written.
+written. The same rule applies to any item claimed by several entries, such
+as one whose copies were already merged in Zotero.
 
 ## Considered Options
 

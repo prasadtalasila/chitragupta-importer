@@ -197,7 +197,8 @@ those matches before assigning anything new.
   The rest (146 in the Zotero data) get none and are not included;
   an item that gains a PDF later gets a new key from the rule.
 - An entry matching no item, or more than one, is listed and gets no
-  lock line. An item claimed by two entries is an error; the run stops.
+  lock line. An item claimed by several entries freezes one citekey and
+  drops the others (see Duplicate items within a library).
 - The run prints matched, unmatched and ambiguous counts. Nothing is
   written if any entry is ambiguous.
 - `--bootstrap` with a lock already present is refused: bootstrap is
@@ -361,12 +362,15 @@ citekeys that would be dropped.
   tags. So the main PDF is the survivor's own whenever it has one.
 - **Report:** each non-survivor is reported as `duplicate <item ID> of <item
   ID>`; it gets no entry and no citekey.
-- **Bootstrap, several entries for one merged item:** exactly one citekey is
-  frozen: the entry that matched the survivor at the PDF level (its own
-  file); if none or several did, the one equal to the key rule's stem for the
-  survivor; else one without a clash suffix; else the smallest. The others are
-  **dropped** and listed so drafts citing them can be updated. Two entries
-  claiming one ordinary item are still refused.
+- **Bootstrap, several entries for one item:** any item claimed by several
+  entries (a survivor merged here, or an item whose copies were already
+  merged in Zotero, which keeps each copy's entry in the existing
+  bibliography) freezes exactly one citekey: the entry whose own file
+  matches one of the item's own PDFs (for a survivor merged here, its PDFs
+  from before the merge); if none or several do, the one equal to the key
+  rule's stem for the item; else one without a clash suffix; else the
+  smallest. The others are **dropped**, retired in the citekey lock as
+  `dropped:<citekey>` and listed so drafts citing them can be updated.
 - **Bootstrap, ties that are not duplicates:** when an entry matches several
   items at its first matching level, keep those whose normalised title equals
   the entry's; exactly one left wins, otherwise the entry is ambiguous.

@@ -27,7 +27,7 @@ def item(tmp_path, key, title, content=TWIN, item_type="journalArticle"):
 
 
 def merged_library(tmp_path):
-    """Two duplicate items titled "Toward a Twin"; returns the merged library and `merged`."""
+    """Two duplicate items titled "Toward a Twin", merged into one."""
     library = Library(
         items=(
             item(tmp_path, "AAAA1111", "Toward a Twin"),
@@ -36,8 +36,7 @@ def merged_library(tmp_path):
         collections=(),
         skipped_libraries=(),
     )
-    merged, duplicates = merge_duplicates(library, oldest_added)
-    return merged, set(duplicates.values())
+    return merge_duplicates(library, oldest_added)[0]
 
 
 def existing_bib(tmp_path, *entries):
@@ -95,13 +94,13 @@ def test_title_tie_unresolved_is_ambiguous(tmp_path, first, second, entry_title)
 
 
 def test_two_entries_for_merged_item_stem_wins(tmp_path):
-    library, merged = merged_library(tmp_path)
+    library = merged_library(tmp_path)
     bib = existing_bib(
         tmp_path,
         ("abernathy_toward_nodate-1", same_pdf()),
         ("abernathy_toward_nodate", same_pdf()),
     )
-    result = bootstrap(bib, library, merged)
+    result = bootstrap(bib, library)
     assert result.lock == {SURVIVOR: "abernathy_toward_nodate"}
     assert result.dropped == ("abernathy_toward_nodate-1",)
 
@@ -114,46 +113,35 @@ def test_two_entries_for_merged_item_stem_wins(tmp_path):
     ],
 )
 def test_three_entries_unsuffixed_wins(tmp_path, citekeys, frozen):
-    library, merged = merged_library(tmp_path)
+    library = merged_library(tmp_path)
     bib = existing_bib(tmp_path, *((citekey, same_pdf()) for citekey in citekeys))
-    result = bootstrap(bib, library, merged)
+    result = bootstrap(bib, library)
     assert result.lock == {SURVIVOR: frozen}
     assert result.dropped == tuple(sorted(set(citekeys) - {frozen}))
 
 
 def test_all_suffixed_smallest_wins(tmp_path):
-    library, merged = merged_library(tmp_path)
+    library = merged_library(tmp_path)
     citekeys = ("twin-2", "twin-1", "other-3")
     bib = existing_bib(tmp_path, *((citekey, same_pdf()) for citekey in citekeys))
-    result = bootstrap(bib, library, merged)
+    result = bootstrap(bib, library)
     assert result.lock == {SURVIVOR: "other-3"}
     assert result.dropped == ("twin-1", "twin-2")
 
 
 def test_dropped_citekey_is_not_checked_but_frozen_one_is(tmp_path):
-    library, merged = merged_library(tmp_path)
+    library = merged_library(tmp_path)
     bib = existing_bib(tmp_path, ("abernathy_toward_nodate", same_pdf()), ("a:b", same_pdf()))
-    assert bootstrap(bib, library, merged).dropped == ("a:b",)
+    assert bootstrap(bib, library).dropped == ("a:b",)
     bib = existing_bib(tmp_path, ("a:b", same_pdf()), ("a:b-1", same_pdf()))
     with pytest.raises(BootstrapRefused, match="'a:b'.*contains ':'"):
-        bootstrap(bib, library, merged)
-
-
-def test_two_entries_for_plain_item_still_refused(tmp_path):
-    library = plain_library(item(tmp_path, "AAAA1111", "Toward a Twin"))
-    bib = existing_bib(
-        tmp_path,
-        ("abernathy_toward_nodate", same_pdf()),
-        ("abernathy_toward_nodate-1", same_pdf()),
-    )
-    with pytest.raises(BootstrapRefused, match="claimed by entries abernathy_toward_nodate, abe"):
-        bootstrap(bib, library, {"zotero:user/BBBB2222"})
+        bootstrap(bib, library)
 
 
 def test_duplicate_citekey_in_bibliography_still_refused(tmp_path):
-    library, merged = merged_library(tmp_path)
+    library = merged_library(tmp_path)
     bib = existing_bib(
         tmp_path, ("abernathy_toward_nodate", same_pdf()), ("abernathy_toward_nodate", same_pdf())
     )
     with pytest.raises(BootstrapRefused, match="duplicate citekey abernathy_toward_nodate"):
-        bootstrap(bib, library, merged)
+        bootstrap(bib, library)

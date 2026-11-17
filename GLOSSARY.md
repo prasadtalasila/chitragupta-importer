@@ -190,7 +190,8 @@ _Avoid_: suspended, inactive
 
 **Dropped citekey**:
 A citekey of the existing bibliography that bootstrap did not freeze because
-another entry for the same survivor was frozen instead.
+another entry for the same item (a survivor, or an item merged in Zotero) was
+frozen instead.
 _Avoid_: lost key, alias
 
 **Rename**:

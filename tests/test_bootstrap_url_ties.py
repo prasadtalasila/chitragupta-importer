@@ -140,8 +140,7 @@ def test_frozen_key_follows_survivor_pdf(tmp_path):
         ("smith_twins_2024", entry_with_pdf(tmp_path, "b.pdf", b"%PDF copy B")),
         ("smith_twins_2024-1", entry_with_pdf(tmp_path, "a.pdf", b"%PDF copy A")),
     )
-    assert bootstrap(bib, lib, {SURVIVOR}).lock == {SURVIVOR: "smith_twins_2024"}
-    result = bootstrap(bib, lib, {SURVIVOR}, survivor_pdfs)
+    result = bootstrap(bib, lib, survivor_pdfs)
     assert result.lock == {SURVIVOR: "smith_twins_2024-1"}
     assert result.dropped == ("smith_twins_2024",)
 
@@ -153,6 +152,6 @@ def test_identical_pdfs_fall_back_to_stem_rule(tmp_path):
         ("smith_twins_2024-1", entry_with_pdf(tmp_path, "a.pdf", b"%PDF same")),
         ("smith_twins_2024", entry_with_pdf(tmp_path, "b.pdf", b"%PDF same")),
     )
-    result = bootstrap(bib, lib, {SURVIVOR}, survivor_pdfs)
+    result = bootstrap(bib, lib, survivor_pdfs)
     assert result.lock == {SURVIVOR: "smith_twins_2024"}
     assert result.dropped == ("smith_twins_2024-1",)

@@ -103,7 +103,7 @@ def seed_lock(
     if bootstrap_from is None:
         return read_lock(lock_path, parse_citekey_lock), None
     try:
-        result = bootstrap(bootstrap_from, library, set(survivor_pdfs), survivor_pdfs)
+        result = bootstrap(bootstrap_from, library, survivor_pdfs)
     except OSError as error:
         raise _cannot_read(error, "during bootstrap") from error
     reserved = {f"{DROPPED_PREFIX}{citekey}": citekey for citekey in result.dropped}

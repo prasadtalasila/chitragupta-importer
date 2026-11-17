@@ -122,3 +122,25 @@ def test_dropped_citekey_is_reserved_in_the_lock(tmp_path):
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
         f"{reserved}{lock}zotero:user/CCCC3333\tsmith_digital_2020-1\n"
     )
+
+
+def test_bootstrap_item_claimed_twice_without_merging(tmp_path):
+    existing = tmp_path / "existing" / "references.bib"
+    existing.parent.mkdir()
+    existing.write_text(
+        "@article{smith_digital_2020,\n  title = {Calibrating the digital twin},\n}\n"
+        "@article{ostrander_calibrating_2024,\n  title = {Calibrating the Digital Twin},\n}\n",
+        encoding="utf-8",
+    )
+    data_dir, out = build(tmp_path, OLDER, SMITH), tmp_path / "out"
+    summary = import_zotero(data_dir, out, existing)
+    assert summary.bootstrap.dropped == ("smith_digital_2020",)
+    assert summary.new_citekeys == ("smith_digital_2020-1",)
+    assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
+        "dropped:smith_digital_2020\tsmith_digital_2020\n"
+        "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
+        "zotero:user/BBBB2222\tsmith_digital_2020-1\n"
+    )
+    first = snapshot(out)
+    import_zotero(data_dir, out)
+    assert snapshot(out) == first

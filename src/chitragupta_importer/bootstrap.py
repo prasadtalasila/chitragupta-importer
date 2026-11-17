@@ -3,9 +3,10 @@
 Each entry of the existing bibliography is matched to an item by, in order,
 PDF content hash, DOI, URL and title; the first level with any match decides.
 Several matches at that level are narrowed to the items whose title equals
-the entry's, if there are any; more than one left is ambiguous. A merged item claimed by
-several entries freezes one citekey; the others are dropped citekeys. An
-entry whose URL tie the title cannot break names a duplicate group.
+the entry's, if there are any; more than one left is ambiguous. An item
+claimed by several entries (for example after a merge in Zotero) freezes one
+citekey; the others are dropped citekeys. An entry whose URL tie the title
+cannot break names a duplicate group.
 """
 
 import re
@@ -113,18 +114,27 @@ def _match(entry: dict[str, str], directory: Path, indexes, titles: Mapping[str,
     return _Match(entry["ID"], len(_LEVELS), frozenset(), pdfs)
 
 
-def _frozen_citekey(claimants: list[_Match], stem: str, survivor_pdfs: Set[str]) -> str:
-    """The one claimant whose own PDF is the survivor's, if exactly one is.
+def _frozen_citekey(claimants: list[_Match], stem: str, item_pdfs: Set[str]) -> str:
+    """The one claimant whose own PDF is one of the item's, if exactly one is.
 
     Otherwise the key rule's stem, else the smallest without a clash suffix,
     else the smallest.
     """
-    by_pdf = [m.citekey for m in claimants if m.pdfs & survivor_pdfs]
+    if len(claimants) == 1:
+        return claimants[0].citekey
+    by_pdf = [m.citekey for m in claimants if m.pdfs & item_pdfs]
     if len(by_pdf) == 1:
         return by_pdf[0]
     citekeys = [m.citekey for m in claimants]
     unsuffixed = [c for c in citekeys if not _CLASH_SUFFIX.search(c)]
     return min([c for c in citekeys if c == stem] or unsuffixed or citekeys)
+
+
+def _own_pdfs(item: Item, survivor_pdfs: Mapping[str, Set[str]]) -> Set[str]:
+    """The item's own PDF hashes: a merged survivor's from before the merge."""
+    if item.item_id in survivor_pdfs:
+        return survivor_pdfs[item.item_id]
+    return normalise.item_pdf_hashes(item)
 
 
 def _read_entries(existing: Path) -> list[dict[str, str]]:
@@ -134,8 +144,6 @@ def _read_entries(existing: Path) -> list[dict[str, str]]:
 
 def _refusals(
     matches: list[_Match],
-    claims: dict[str, list[_Match]],
-    merged: Set[str],
     frozen: Mapping[str, str],
 ) -> Iterable[str]:
     counts = Counter(m.citekey for m in matches)
@@ -144,10 +152,6 @@ def _refusals(
     ambiguous = sorted(m.citekey for m in matches if len(m.found) > 1)
     if ambiguous:
         yield f"ambiguous entries, each matching several items: {', '.join(ambiguous)}"
-    for item_id in sorted(claims):
-        if len(claims[item_id]) > 1 and item_id not in merged:
-            citekeys = ", ".join(sorted(m.citekey for m in claims[item_id]))
-            yield f"item {item_id} claimed by entries {citekeys}"
     for citekey in sorted(frozen.values()):
         problem = citekey_problem(citekey)
         if problem is not None:
@@ -186,15 +190,14 @@ def _split_frozen(
 def bootstrap(
     existing: Path,
     library: Library,
-    merged: Set[str] = frozenset(),
     survivor_pdfs: Mapping[str, Set[str]] = MappingProxyType({}),
 ) -> BootstrapResult:
     """Match the existing bibliography's entries to items; refuse if any match is unsafe.
 
-    `merged` holds the item IDs of survivors that absorbed at least one other
-    item; only those may be claimed by several entries. `survivor_pdfs` maps
-    a merged survivor's item ID to the SHA-256 hashes of the survivor's own
-    PDFs in the unmerged library.
+    An item claimed by several entries freezes one of their citekeys and
+    drops the others. `survivor_pdfs` maps a merged survivor's item ID to the
+    SHA-256 hashes of the survivor's own PDFs in the unmerged library; other
+    items' own PDFs are hashed from the library.
     """
     items = {item.item_id: item for item in library.items}
     matches = _match_entries(existing, library)
@@ -203,12 +206,12 @@ def bootstrap(
         if len(match.found) == 1:
             claims.setdefault(next(iter(match.found)), []).append(match)
     frozen = {
-        i: _frozen_citekey(claims[i], key_stem(items[i]), survivor_pdfs.get(i, frozenset()))
+        i: _frozen_citekey(claims[i], key_stem(items[i]), _own_pdfs(items[i], survivor_pdfs))
         for i in sorted(claims)
     }
-    problems = list(_refusals(matches, claims, merged, frozen))
+    problems = list(_refusals(matches, frozen))
     if problems:
-        raise BootstrapRefused("bootstrap refused: " + "; ".join(problems))
+        raise BootstrapRefused("bootstrap refused:\n" + "\n".join(problems))
     lock, not_included = _split_frozen(frozen, items)
     unmatched = tuple(sorted(m.citekey for m in matches if not m.found))
     dropped = tuple(

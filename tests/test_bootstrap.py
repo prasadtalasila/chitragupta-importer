@@ -130,11 +130,12 @@ def test_first_matching_level_decides_over_ambiguous_later_level(tmp_path):
     assert bootstrap(bib, library).lock == {"zotero:user/AAAA1111": "k_twin"}
 
 
-def test_item_claimed_by_two_entries_refuses(tmp_path):
+def test_item_claimed_by_two_entries_smallest_frozen(tmp_path):
     library = library_of(tmp_path, ("AAAA1111", {"title": "Twin"}, [("a.pdf", PDF)]))
-    bib = existing_bib(tmp_path, entry("k1", title="Twin") + entry("k2", title="TWIN"))
-    with pytest.raises(BootstrapRefused, match="k1.*k2"):
-        bootstrap(bib, library)
+    bib = existing_bib(tmp_path, entry("k2", title="Twin") + entry("k1", title="TWIN"))
+    result = bootstrap(bib, library)
+    assert result.lock == {"zotero:user/AAAA1111": "k1"}
+    assert result.dropped == ("k2",)
 
 
 def test_matched_item_without_pdf_gets_no_lock_line(tmp_path):
