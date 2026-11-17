@@ -76,6 +76,17 @@ def test_generic_url_with_title_breaks_groups_nothing(tmp_path):
     assert not url_tie_groups(bib, lib)
 
 
+def test_url_tie_narrowed_to_items_with_entry_title(tmp_path):
+    project = "https://example.org/project"
+    lib = library(
+        item("AAAA1111", "Twins", url=project),
+        item("BBBB2222", "Twins", item_type="report", url=project),
+        item("CCCC3333", "Deliverable D1", url=project),
+    )
+    bib = existing_bib(tmp_path, ("smith_twins_2024", {"title": "Twins", "url": project}))
+    assert url_tie_groups(bib, lib) == [frozenset({SURVIVOR, "zotero:user/BBBB2222"})]
+
+
 def merged_copies(tmp_path, a_bytes, b_bytes):
     """Copies A (older, the survivor) and B with PDFs; the merged library and survivor PDFs."""
     copies = []
@@ -88,7 +99,7 @@ def merged_copies(tmp_path, a_bytes, b_bytes):
         copies.append(replace(copy, date_added=f"{added}-01-01 00:00:00"))
     merged, duplicates = merge_duplicates(library(*copies), pdf_then_oldest)
     assert set(duplicates.values()) == {SURVIVOR}
-    return merged, {SURVIVOR: item_pdf_hashes(merged.items[0])}
+    return merged, {SURVIVOR: item_pdf_hashes(copies[0])}
 
 
 def entry_with_pdf(tmp_path, name, content):

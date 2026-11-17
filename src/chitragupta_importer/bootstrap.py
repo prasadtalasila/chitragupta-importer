@@ -2,8 +2,8 @@
 
 Each entry of the existing bibliography is matched to an item by, in order,
 PDF content hash, DOI, URL and title; the first level with any match decides.
-Several matches at that level are narrowed to the one item whose title
-equals the entry's, if there is exactly one. A merged item claimed by
+Several matches at that level are narrowed to the items whose title equals
+the entry's, if there are any; more than one left is ambiguous. A merged item claimed by
 several entries freezes one citekey; the others are dropped citekeys. An
 entry whose URL tie the title cannot break names a duplicate group.
 """
@@ -97,8 +97,8 @@ def _index(library: Library) -> list[dict[str, set[str]]]:
 def _match(entry: dict[str, str], directory: Path, indexes, titles: Mapping[str, str]) -> _Match:
     """Match the entry to item IDs at its first matching level.
 
-    Several matches are narrowed to the one item whose normalised title equals
-    the entry's, if there is exactly one; otherwise all are kept. An entry
+    Several matches are narrowed to the items whose normalised title equals
+    the entry's, if there are any; otherwise all are kept. An entry
     matching nothing has level `len(_LEVELS)`.
     """
     keys = [entry_keys(entry, directory) for _, entry_keys in _LEVELS]
@@ -108,7 +108,7 @@ def _match(entry: dict[str, str], directory: Path, indexes, titles: Mapping[str,
         if found:
             title = normalise.normal_title(entry.get("title", ""))
             same_title = {item_id for item_id in found if titles[item_id] == title}
-            kept = same_title if len(same_title) == 1 and title else found
+            kept = same_title if same_title and title else found
             return _Match(entry["ID"], level, frozenset(kept), pdfs)
     return _Match(entry["ID"], len(_LEVELS), frozenset(), pdfs)
 
@@ -193,7 +193,8 @@ def bootstrap(
 
     `merged` holds the item IDs of survivors that absorbed at least one other
     item; only those may be claimed by several entries. `survivor_pdfs` maps
-    a merged survivor's item ID to the SHA-256 hashes of its own PDFs.
+    a merged survivor's item ID to the SHA-256 hashes of the survivor's own
+    PDFs in the unmerged library.
     """
     items = {item.item_id: item for item in library.items}
     matches = _match_entries(existing, library)
