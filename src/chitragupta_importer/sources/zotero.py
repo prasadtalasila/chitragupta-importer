@@ -16,7 +16,10 @@ from pathlib import Path
 
 from chitragupta_importer.model import Attachment, Collection, Creator, Item, Library
 
-KNOWN_SCHEMA_VERSIONS = frozenset({121})
+# Zotero userdata 121 (Zotero 6/7) to 131 (Zotero 9/10): migrations 122-131 only add
+# columns, indexes and settings this reader never selects, and 128 normalises
+# `storage:` paths to the form `_attachment` already resolves.
+KNOWN_SCHEMA_VERSIONS = frozenset(range(121, 132))
 
 _DATABASE = "zotero.sqlite"
 _SIDE_FILES = ("-journal", "-wal")

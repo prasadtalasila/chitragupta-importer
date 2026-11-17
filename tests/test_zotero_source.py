@@ -110,10 +110,20 @@ def test_skips_deleted_attachments(tmp_path):
     assert [a.file_name for a in lib.items[0].attachments] == ["b.pdf"]
 
 
-def test_refuses_unknown_schema(tmp_path):
+@pytest.mark.parametrize("version", [120, 132])
+def test_refuses_unknown_schema(tmp_path, version):
     fx = ZoteroFixture(tmp_path)
-    with pytest.raises(UnknownSchema, match="122"):
-        read_library(fx.build(schema_version=122))
+    with pytest.raises(UnknownSchema, match=str(version)):
+        read_library(fx.build(schema_version=version))
+
+
+@pytest.mark.parametrize("version", [121, 122, 130, 131])
+def test_reads_zotero_7_to_9_schemas(tmp_path, version):
+    # Zotero's userdata migrations 122-131 only add columns, indexes and settings
+    # the reader never selects; 128 rewrites storage paths to `storage:<name>`.
+    fx = ZoteroFixture(tmp_path)
+    fx.add_item("ITEMAAAA", pdfs=[("a.pdf", b"%PDF-1")])
+    assert read_library(fx.build(schema_version=version)).items[0].item_id == "zotero:user/ITEMAAAA"
 
 
 def test_lists_group_libraries_as_skipped(tmp_path):

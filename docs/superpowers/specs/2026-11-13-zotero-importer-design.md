@@ -132,7 +132,8 @@ citekeys.lock ──────────────────────
 - Open with a `file:` URI, `mode=ro`, absolute path, UNC-safe (as
   `populate_bib_groups.py` in chitragupta does).
 - Read `version` where `schema = 'userdata'`; refuse any value other
-  than the known ones (121 today) with a message naming the version.
+  than the known ones (121 to 131: Zotero's migrations 122-131 add only columns,
+  indexes and settings this importer does not read) with a message naming the version.
 - Zotero holds a lock while running. Builder's call how to read safely
   (copy to a temp file first, or `immutable=1`), as long as the
   original is never opened writable.
