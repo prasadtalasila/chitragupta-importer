@@ -23,7 +23,7 @@ _ABSOLUTE_PATH = re.compile(r"^(/|[A-Za-z]:[\\/])")
 _NOT_ITEMS = ("attachment", "note", "annotation")
 
 _ITEMS = f"""
-    SELECT i.itemID, i.key, t.typeName FROM items i JOIN itemTypes t USING (itemTypeID)
+    SELECT i.itemID, i.key, t.typeName, i.dateAdded FROM items i JOIN itemTypes t USING (itemTypeID)
     WHERE i.libraryID = ? AND t.typeName NOT IN ({", ".join("?" for _ in _NOT_ITEMS)})
       AND i.itemID NOT IN (SELECT itemID FROM deletedItems)"""
 _FIELDS = """
@@ -109,8 +109,9 @@ def _items(conn: sqlite3.Connection, data_dir: Path, library_id: int) -> tuple[I
             attachments=tuple(_attachment(data_dir, *row) for row in attachments[item_id]),
             collection_ids=tuple(sorted(_user_id(key) for (key,) in memberships[item_id])),
             tags=tuple(sorted((name for (name,) in tags[item_id]), key=_tag_order)),
+            date_added=date_added or "",
         )
-        for item_id, key, item_type in conn.execute(_ITEMS, (library_id, *_NOT_ITEMS))
+        for item_id, key, item_type, date_added in conn.execute(_ITEMS, (library_id, *_NOT_ITEMS))
     ]
     return tuple(sorted(items, key=lambda item: item.item_id))
 

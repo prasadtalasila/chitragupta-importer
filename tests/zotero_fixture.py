@@ -49,6 +49,7 @@ class ZoteroFixture:
         collections=(),
         tags=(),
         deleted=False,
+        date_added="2020-01-01 00:00:00",
     ):
         self._items.append(
             {
@@ -60,6 +61,7 @@ class ZoteroFixture:
                 "collections": collections,
                 "tags": tags,
                 "deleted": deleted,
+                "date_added": date_added,
             }
         )
 
@@ -110,7 +112,7 @@ class ZoteroFixture:
         return ids
 
     def _write_item(self, conn, rows, item, collection_ids):
-        item_id = _insert_item(conn, rows, item["key"], item["type"])
+        item_id = _insert_item(conn, rows, item["key"], item["type"], item["date_added"])
         if item["deleted"]:
             conn.execute("INSERT INTO deletedItems (itemID) VALUES (?)", (item_id,))
         for name, value in item["fields"].items():
@@ -148,11 +150,11 @@ class ZoteroFixture:
             (folder / file_name).write_bytes(content)
 
 
-def _insert_item(conn, rows, key, item_type) -> int:
+def _insert_item(conn, rows, key, item_type, date_added="2020-01-01 00:00:00") -> int:
     type_id = rows.id_of(conn, "itemTypes", "typeName", item_type)
     cursor = conn.execute(
-        "INSERT INTO items (itemTypeID, libraryID, key) VALUES (?, ?, ?)",
-        (type_id, USER_LIBRARY, key),
+        "INSERT INTO items (itemTypeID, libraryID, key, dateAdded) VALUES (?, ?, ?, ?)",
+        (type_id, USER_LIBRARY, key, date_added),
     )
     return cursor.lastrowid
 

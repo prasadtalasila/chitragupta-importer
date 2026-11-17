@@ -32,8 +32,11 @@ class Collection:
 
 
 @dataclass(frozen=True)
-class Item:
-    """One item; `fields` is keyed by the reference manager's field name."""
+class Item:  # pylint: disable=too-many-instance-attributes
+    """One item; `fields` is keyed by the reference manager's field name.
+
+    `date_added` is when the item was added, as `YYYY-MM-DD HH:MM:SS`.
+    """
 
     item_id: str
     item_type: str
@@ -42,6 +45,7 @@ class Item:
     attachments: tuple[Attachment, ...]
     collection_ids: tuple[str, ...]
     tags: tuple[str, ...]
+    date_added: str = ""
 
 
 @dataclass(frozen=True)

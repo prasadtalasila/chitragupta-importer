@@ -207,3 +207,11 @@ def test_attachment_without_path_is_none(tmp_path):
     _set_attachment_path(data_dir, None)
     (attachment,) = read_library(data_dir).items[0].attachments
     assert attachment == Attachment("application/pdf", None, "")
+
+
+def test_reader_reads_date_added(tmp_path):
+    fx = ZoteroFixture(tmp_path)
+    fx.add_item("ITEMAAAA", date_added="2019-05-06 07:08:09")
+    fx.add_item("ITEMBBBB")
+    lib = read_library(fx.build())
+    assert [item.date_added for item in lib.items] == ["2019-05-06 07:08:09", "2020-01-01 00:00:00"]

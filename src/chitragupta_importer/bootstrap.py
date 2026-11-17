@@ -8,17 +8,18 @@ import re
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from hashlib import sha256
 from pathlib import Path
 
 from bibtexparser.bparser import BibTexParser
 
 from chitragupta_importer.citekeys import citekey_problem
 from chitragupta_importer.model import Item, Library
+from chitragupta_importer.normalise import hash_file as _hash_file
+from chitragupta_importer.normalise import item_dois as _item_dois
+from chitragupta_importer.normalise import normal_doi as _doi
+from chitragupta_importer.normalise import normal_title as _title
 from chitragupta_importer.pdfs import LeftOutReason, is_pdf, main_pdf
 
-_DOI_PREFIX = re.compile(r"^(https://doi\.org/|http://dx\.doi\.org/|doi:)")
-_EXTRA_DOI = re.compile(r"^DOI:(.*)$", re.MULTILINE)
 _ESCAPE = re.compile(r"\\(.)")
 
 
@@ -41,10 +42,6 @@ def _split_unescaped(text: str, separator: str) -> list[str]:
     return re.split(rf"(?<!\\){re.escape(separator)}", text)
 
 
-def _hash_file(path: Path) -> str:
-    return sha256(path.read_bytes()).hexdigest()
-
-
 def _entry_pdf_hashes(entry: dict[str, str], directory: Path) -> set[str]:
     """Hash the PDFs of the entry's `file` field (`desc:path:mime;...`) found on disk."""
     hashes = set()
@@ -63,19 +60,6 @@ def _item_pdf_hashes(item: Item) -> set[str]:
         for a in item.attachments
         if is_pdf(a) and a.path is not None and a.path.is_file()
     }
-
-
-def _doi(text: str) -> str:
-    return _DOI_PREFIX.sub("", text.strip().lower()).strip()
-
-
-def _title(text: str) -> str:
-    return "".join(c for c in text.casefold() if c.isalnum())
-
-
-def _item_dois(item: Item) -> set[str]:
-    extra = _EXTRA_DOI.findall(item.fields.get("extra", ""))
-    return {_doi(text) for text in [item.fields.get("DOI", ""), *extra]}
 
 
 _Level = tuple[Callable[[Item], set[str]], Callable[[dict[str, str], Path], set[str]]]
