@@ -1,9 +1,12 @@
-"""Import run refusals: each happens before the first write."""
+"""Import run refusals, each before the first write, and a write that fails part way."""
+
+import os
+import re
 
 import pytest
 from run_fixture import OSTRANDER, SMITH, build, existing_bibliography, snapshot
 
-from chitragupta_importer.run import ImportRefused, import_zotero, pdf_destination
+from chitragupta_importer.run import ImportRefused, WriteFailed, import_zotero, pdf_destination
 from chitragupta_importer.sources.zotero import UnknownSchema
 
 
@@ -174,3 +177,27 @@ def test_file_unreadable_during_bootstrap_matching_refused(tmp_path, monkeypatch
     with pytest.raises(ImportRefused, match="vanished.pdf: cannot read during bootstrap"):
         import_zotero(data_dir, out, bootstrap_from=existing_bibliography(tmp_path))
     assert not out.exists()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads files whatever their mode")
+def test_unreadable_main_pdf_refused_before_any_write(tmp_path):
+    out = tmp_path / "out"
+    import_zotero(build(tmp_path / "v1", OSTRANDER), out)
+    before = snapshot(out)
+    data_dir = build(tmp_path / "v2", OSTRANDER, SMITH)
+    pdf = next((data_dir / "storage").rglob("smith.pdf"))
+    pdf.chmod(0)
+    try:
+        with pytest.raises(ImportRefused, match=f"{re.escape(str(pdf))}: cannot read the main PDF"):
+            import_zotero(data_dir, out)
+    finally:
+        pdf.chmod(0o644)
+    assert snapshot(out) == before
+
+
+def test_failed_write_is_a_write_error(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "files").write_bytes(b"not a directory")
+    with pytest.raises(WriteFailed, match="files: cannot write the papers directory"):
+        import_zotero(build(tmp_path, OSTRANDER), out)

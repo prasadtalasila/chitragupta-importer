@@ -1,7 +1,7 @@
 """Normalised match keys of items: DOI, title and PDF content hash."""
 
 import re
-from hashlib import sha256
+from hashlib import file_digest
 from pathlib import Path
 
 from chitragupta_importer.model import Item
@@ -9,11 +9,27 @@ from chitragupta_importer.pdfs import is_pdf
 
 _DOI_PREFIX = re.compile(r"^(https://doi\.org/|http://dx\.doi\.org/|doi:)")
 _EXTRA_DOI = re.compile(r"^DOI:(.*)$", re.MULTILINE)
+# (path, size, modification time) -> SHA-256 hex digest, for one import run.
+_HASHES: dict[tuple[str, int, int], str] = {}
+
+
+def clear_hash_cache() -> None:
+    """Forget every remembered file hash; each import run starts with this."""
+    _HASHES.clear()
 
 
 def hash_file(path: Path) -> str:
-    """The SHA-256 hex digest of the file's bytes."""
-    return sha256(path.read_bytes()).hexdigest()
+    """The SHA-256 hex digest of the file's bytes, read in chunks.
+
+    An unchanged file (same path, size and modification time) is read once
+    until `clear_hash_cache`.
+    """
+    status = path.stat()
+    key = (str(path), status.st_size, status.st_mtime_ns)
+    if key not in _HASHES:
+        with path.open("rb") as handle:
+            _HASHES[key] = file_digest(handle, "sha256").hexdigest()
+    return _HASHES[key]
 
 
 def item_pdf_hashes(item: Item) -> set[str]:

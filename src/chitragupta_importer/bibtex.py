@@ -101,6 +101,16 @@ def _escape(text: str) -> str:
     return "".join(out)
 
 
+def _encode_unpaired_braces(text: str) -> str:
+    """Percent-encode the unpaired `{` and `}` of a URL or DOI; the rest stays raw."""
+    paired = _paired_braces(text)
+    encoded = {"{": "%7B", "}": "%7D"}
+    return "".join(
+        encoded[char] if char in encoded and index not in paired else char
+        for index, char in enumerate(text)
+    )
+
+
 def _protect_case(value: str) -> str:
     """Brace each run of letters and digits holding an upper-case letter.
 
@@ -181,8 +191,8 @@ def _field_values(citekey: str, item: Item, slug_paths: Sequence[str]) -> dict[s
     fields = _escaped_fields(item)
     fields.update(_creator_fields(item))
     fields.update(_date_fields(item))
-    fields["url"] = item.fields.get("url", "")
-    fields["doi"] = item.fields.get("DOI", "")
+    fields["url"] = _encode_unpaired_braces(item.fields.get("url", ""))
+    fields["doi"] = _encode_unpaired_braces(item.fields.get("DOI", ""))
     fields["urldate"] = item.fields.get("accessDate", "")[:10]
     fields["file"] = f"Full Text PDF:files/{citekey}.pdf:application/pdf"
     fields["cg-collections"] = _escape(", ".join(slug_paths))

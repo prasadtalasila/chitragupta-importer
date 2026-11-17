@@ -1,7 +1,7 @@
 """Import runs with --merge-duplicates: duplicate items merged before anything else."""
 
 import pytest
-from run_fixture import NEWER, OLDER, build, snapshot
+from run_fixture import NEWER, OLDER, SMITH, build, snapshot
 
 from chitragupta_importer.run import ImportRefused, format_summary, import_zotero
 
@@ -41,6 +41,7 @@ def test_bootstrap_with_duplicates_freezes_one_key(tmp_path):
     summary = import_zotero(data_dir, out, existing_with_two_keys(tmp_path), merge_duplicates=True)
     assert summary.bootstrap.dropped == ("ostrander_calibrating_2024-1",)
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
+        "dropped:ostrander_calibrating_2024-1\tostrander_calibrating_2024-1\n"
         "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
     )
     assert format_summary(summary).endswith(
@@ -95,3 +96,29 @@ def test_oserror_without_filename_while_merging_shows_the_error(tmp_path, monkey
         import_zotero(build(tmp_path, NEWER, OLDER), tmp_path / "out", merge_duplicates=True)
     assert "None" not in str(refused.value)
     assert not (tmp_path / "out").exists()
+
+
+def test_dropped_citekey_is_reserved_in_the_lock(tmp_path):
+    existing = tmp_path / "existing" / "references.bib"
+    existing.parent.mkdir()
+    existing.write_text(
+        "".join(
+            f"@article{{{key},\n  title = {{Calibrating the digital twin}},\n}}\n"
+            for key in ("smith_digital_2020", "ostrander_calibrating_2024")
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "out"
+    import_zotero(build(tmp_path / "v1", NEWER, OLDER), out, existing, merge_duplicates=True)
+    lock = "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
+    reserved = "dropped:smith_digital_2020\tsmith_digital_2020\n"
+    assert (out / "citekeys.lock").read_text(encoding="utf-8") == reserved + lock
+    summary = import_zotero(
+        build(tmp_path / "v2", NEWER, OLDER, {**SMITH, "key": "CCCC3333"}),
+        out,
+        merge_duplicates=True,
+    )
+    assert summary.new_citekeys == ("smith_digital_2020-1",)
+    assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
+        f"{reserved}{lock}zotero:user/CCCC3333\tsmith_digital_2020-1\n"
+    )

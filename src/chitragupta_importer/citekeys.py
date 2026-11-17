@@ -22,6 +22,8 @@ _DROPPED_FROM_TITLE = re.compile(
 )
 _YEAR = re.compile(r"[0-9]{4}")
 _OUTSIDE_KEY_ALPHABET = re.compile(r"[^a-z0-9_-]")
+# The pseudo item ID prefix under which a dropped citekey is reserved in the lock.
+DROPPED_PREFIX = "dropped:"
 
 
 class UnsafeCitekey(ValueError):
@@ -76,6 +78,7 @@ def key_stem(item: Item) -> str:
 def parse_citekey_lock(text: str) -> dict[str, str]:
     """Read citekey lock text (`<item ID>\\t<citekey>` lines) into item ID -> citekey.
 
+    A dropped citekey's line has the pseudo item ID `dropped:<citekey>`.
     Raises ValueError for a line without a tab or a citekey held by two item IDs.
     """
     lock: dict[str, str] = {}

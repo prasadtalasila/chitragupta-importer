@@ -6,7 +6,7 @@ import click
 
 from chitragupta_importer.bootstrap import BootstrapRefused
 from chitragupta_importer.citekeys import UnsafeCitekey
-from chitragupta_importer.run import ImportRefused, format_summary, import_zotero
+from chitragupta_importer.run import ImportRefused, WriteFailed, format_summary, import_zotero
 from chitragupta_importer.sources.zotero import UnknownSchema, UnreadableLibrary
 
 
@@ -55,6 +55,7 @@ def zotero(
         UnsafeCitekey,
         BootstrapRefused,
         ImportRefused,
+        WriteFailed,
     ) as error:
         raise click.ClickException(str(error)) from error
     click.echo(format_summary(summary), nl=False)

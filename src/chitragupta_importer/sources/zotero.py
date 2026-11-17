@@ -85,11 +85,17 @@ def _copy_database(data_dir: Path, copy_dir: Path) -> Path:
     """Copy the database and its side files until the database stays unchanged throughout."""
     database = data_dir / _DATABASE
     for _ in range(_COPY_ATTEMPTS):
-        before = _signature(database)
-        shutil.copyfile(database, copy_dir / _DATABASE)
-        for suffix in _SIDE_FILES:
-            _copy_side_file(data_dir / f"{_DATABASE}{suffix}", copy_dir)
-        if _signature(database) == before:
+        try:
+            before = _signature(database)
+            shutil.copyfile(database, copy_dir / _DATABASE)
+            for suffix in _SIDE_FILES:
+                _copy_side_file(data_dir / f"{_DATABASE}{suffix}", copy_dir)
+            unchanged = _signature(database) == before
+        except OSError as error:
+            raise UnreadableLibrary(
+                f"{database}: cannot copy the database ({error.strerror or error})"
+            ) from error
+        if unchanged:
             return copy_dir / _DATABASE
     raise UnreadableLibrary(
         f"{database}: kept changing while it was copied ({_COPY_ATTEMPTS} attempts);"

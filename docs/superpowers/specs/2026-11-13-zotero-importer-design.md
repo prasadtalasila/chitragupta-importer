@@ -149,6 +149,9 @@ group libraries are listed as skipped (the Zotero data has none).
 
 Stored in `papers/citekeys.lock`: one line per item ever included,
 `<item ID>\t<citekey>`, sorted by item ID, UTF-8, LF.
+Bootstrap also writes each dropped citekey as `dropped:<citekey>\t<citekey>`,
+a pseudo item ID that matches no item, so that key is never given to another
+paper; like every line, it is never removed.
 
 Rules, in order:
 

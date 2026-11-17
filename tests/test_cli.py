@@ -1,10 +1,12 @@
 """The console entry point: version, help and `python -m`."""
 
+import os
 import sqlite3
 import subprocess
 import sys
 from importlib.metadata import version
 
+import pytest
 from click.testing import CliRunner
 from run_fixture import NEWER, OLDER, build
 from zotero_fixture import ZoteroFixture
@@ -123,3 +125,37 @@ def test_library_without_personal_library_refused(tmp_path):
     conn.close()
     stderr = _refused(data_dir, tmp_path / "out")
     assert stderr.startswith("Error: ") and "personal library" in stderr
+
+
+def test_database_that_cannot_be_copied_refused(tmp_path, monkeypatch):
+    def full(src, dst):
+        raise OSError(28, "No space left on device", str(dst))
+
+    monkeypatch.setattr("chitragupta_importer.sources.zotero.shutil.copyfile", full)
+    stderr = _refused(zotero_data_dir(tmp_path), tmp_path / "out")
+    assert stderr.startswith("Error: ") and "Traceback" not in stderr
+    assert "zotero.sqlite: cannot copy the database (No space left on device)" in stderr
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads files whatever their mode")
+def test_unreadable_database_refused(tmp_path):
+    data_dir = zotero_data_dir(tmp_path)
+    database = data_dir / "zotero.sqlite"
+    database.chmod(0)
+    try:
+        stderr = _refused(data_dir, tmp_path / "out")
+    finally:
+        database.chmod(0o644)
+    assert "zotero.sqlite: cannot copy the database (Permission denied)" in stderr
+
+
+def test_failed_write_exits_with_error(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "files").write_bytes(b"not a directory")
+    args = ["zotero", "--data-dir", str(zotero_data_dir(tmp_path)), "--out", str(out)]
+    result = CliRunner().invoke(main, args)
+    assert result.exit_code == 1 and result.stdout == ""
+    assert result.stderr.startswith("Error: ") and "cannot write the papers directory" in (
+        result.stderr
+    )

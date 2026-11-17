@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence, Set
 from pathlib import Path
 
 from chitragupta_importer.bootstrap import BootstrapResult, bootstrap, url_tie_groups
-from chitragupta_importer.citekeys import parse_citekey_lock
+from chitragupta_importer.citekeys import DROPPED_PREFIX, parse_citekey_lock
 from chitragupta_importer.duplicates import duplicate_groups, merge_duplicates, pdf_then_oldest
 from chitragupta_importer.model import Library
 from chitragupta_importer.normalise import item_pdf_hashes
@@ -96,11 +96,15 @@ def seed_lock(
     bootstrap_from: Path | None,
     survivor_pdfs: Mapping[str, Set[str]],
 ) -> tuple[dict[str, str], BootstrapResult | None]:
-    """The citekey lock to start from, and the bootstrap result when bootstrapping."""
+    """The citekey lock to start from, and the bootstrap result when bootstrapping.
+
+    A bootstrap reserves each dropped citekey under `dropped:<citekey>`.
+    """
     if bootstrap_from is None:
         return read_lock(lock_path, parse_citekey_lock), None
     try:
         result = bootstrap(bootstrap_from, library, set(survivor_pdfs), survivor_pdfs)
     except OSError as error:
         raise _cannot_read(error, "during bootstrap") from error
-    return dict(result.lock), result
+    reserved = {f"{DROPPED_PREFIX}{citekey}": citekey for citekey in result.dropped}
+    return {**result.lock, **reserved}, result

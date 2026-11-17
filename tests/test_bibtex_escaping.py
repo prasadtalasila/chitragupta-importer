@@ -106,3 +106,16 @@ def test_name_table_escapes_braces():
 
 def test_name_table_unpaired_brace_becomes_space():
     assert render_name_table([("a", "A }B{")]) == "@comment{cg-collections v1\na\tA  B \n}\n"
+
+
+def test_unpaired_braces_in_url_and_doi_percent_encoded():
+    entries = [
+        render_entry("a", item(url="http://x.example/a}b", DOI="10.9999/x{"), []),
+        render_entry("b", item(url="http://x.example/{c}%20#d_e", DOI="10.9999/{y}"), []),
+        render_entry("c", item(title="After"), []),
+    ]
+    database = bibtexparser.loads(render_bibliography("", entries), BibTexParser())
+    assert [e["ID"] for e in database.entries] == ["a", "b", "c"]
+    a, b = database.entries[0], database.entries[1]
+    assert (a["url"], a["doi"]) == ("http://x.example/a%7Db", "10.9999/x%7B")
+    assert (b["url"], b["doi"]) == ("http://x.example/{c}%20#d_e", "10.9999/{y}")

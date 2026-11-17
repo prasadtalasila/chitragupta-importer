@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from chitragupta_importer import normalise
 from chitragupta_importer.bibtex import render_bibliography, render_entry, render_name_table
 from chitragupta_importer.citekeys import (
     assign_citekeys,
@@ -46,11 +47,16 @@ __all__ = [
     "ImportRefused",
     "Plan",
     "RunSummary",
+    "WriteFailed",
     "format_summary",
     "import_zotero",
     "pdf_destination",
     "plan_import",
 ]
+
+
+class WriteFailed(Exception):
+    """An import run that failed while writing; the papers directory may be partly written."""
 
 
 @dataclass(frozen=True)
@@ -105,6 +111,18 @@ def _check_citekeys(included: Mapping[str, tuple[Item, Path]], lock: Mapping[str
             raise ImportRefused(f"unsafe citekey {lock[item_id]!r} for item {item_id}: {problem}")
 
 
+def _check_readable(included: Mapping[str, tuple[Item, Path]]) -> None:
+    """Refuse when an included item's main PDF cannot be opened for reading."""
+    for item_id, (_, pdf) in sorted(included.items()):
+        try:
+            with pdf.open("rb"):
+                pass
+        except OSError as error:
+            raise ImportRefused(
+                f"{pdf}: cannot read the main PDF of item {item_id} ({error.strerror})"
+            ) from error
+
+
 def pdf_destination(out_dir: Path, name: str) -> Path:
     """`out_dir/files/name`; ImportRefused if it resolves outside `out_dir/files`."""
     files = out_dir / FILES
@@ -126,6 +144,7 @@ def _write(out_dir: Path, plan: Plan) -> None:
 def _plan(out_dir: Path, library: Library, lock: dict[str, str]) -> tuple[Plan, RunSummary]:
     """The plan and summary for the merged `library`, starting from the citekey `lock`."""
     included, left_out = _split(library)
+    _check_readable(included)
     collection_lock = read_lock(out_dir / COLLECTION_LOCK, parse_collection_lock)
     lock, new_ids = assign_citekeys({i: key_stem(item) for i, (item, _) in included.items()}, lock)
     _check_citekeys(included, lock)
@@ -152,6 +171,7 @@ def plan_import(
     Raises ImportRefused (DuplicatesFound included), UnknownSchema,
     UnreadableLibrary, BootstrapRefused or UnsafeCitekey.
     """
+    normalise.clear_hash_cache()
     check_bootstrap(out_dir / CITEKEY_LOCK, bootstrap_from)
     library, duplicates, survivor_pdfs = merged_library(data_dir, bootstrap_from, merge)
     lock, bootstrapped = seed_lock(out_dir / CITEKEY_LOCK, library, bootstrap_from, survivor_pdfs)
@@ -171,10 +191,17 @@ def import_zotero(
 
     Duplicate groups refuse the import run unless `merge_duplicates`. A
     `dry_run` writes and creates nothing but refuses as a real run would.
-    Raises what `plan_import` raises, before anything is written.
+    Raises what `plan_import` raises, before anything is written, and
+    WriteFailed when writing fails part way.
     """
     plan, summary = plan_import(data_dir, out_dir, bootstrap_from, merge_duplicates)
     if dry_run:
         return replace(summary, dry_run=True)
-    _write(out_dir, plan)
+    try:
+        _write(out_dir, plan)
+    except OSError as error:
+        raise WriteFailed(
+            f"{error.filename or out_dir}: cannot write the papers directory"
+            f" ({error.strerror or error})"
+        ) from error
     return summary

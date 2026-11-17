@@ -79,3 +79,10 @@ def test_parse_refuses_a_citekey_held_by_two_item_ids():
     text = "zotero:user/A\tk\nzotero:user/B\tother\nzotero:user/C\tk\n"
     with pytest.raises(ValueError, match="line 3: citekey 'k' is held by both zotero:user/A and"):
         parse_citekey_lock(text)
+
+
+def test_parse_accepts_dropped_lines():
+    text = "dropped:a:b\ta:b\ndropped:k-1\tk-1\nzotero:user/A\tk\n"
+    lock = parse_citekey_lock(text)
+    assert lock == {"dropped:a:b": "a:b", "dropped:k-1": "k-1", "zotero:user/A": "k"}
+    assert format_citekey_lock(lock) == text
