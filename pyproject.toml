@@ -10,6 +10,8 @@ requires-python = ">=3.12"
 dependencies = [
     "bibtexparser>=1.4,<2",
     "click>=8.2",
+    "rich>=15.0.0",
+    "rich-click>=1.9.9",
 ]
 
 [project.scripts]

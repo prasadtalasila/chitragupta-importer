@@ -8,25 +8,85 @@ Zotero is the first supported reference manager.
 
 ## Usage
 
-The first import run freezes the citekeys of an existing bibliography (for
-example a Zotero BibTeX export) in a new citekey lock:
+Find the Zotero data directory (it holds `zotero.sqlite` and `storage/`)
+under Zotero Settings → Advanced → Files and Folders. Check the first import
+run before writing anything: it freezes the citekeys of an existing
+bibliography (for example a Zotero BibTeX export) in a new citekey lock,
+merges duplicate items and prints what it would do:
 
 ```bash
-chitragupta-importer zotero --data-dir ~/Zotero --out papers --bootstrap old.bib
+chitragupta-importer zotero --data-dir ~/Zotero --out papers \
+    --bootstrap old.bib --merge-duplicates --dry-run
+```
+
+Then run it for real:
+
+```bash
+chitragupta-importer zotero --data-dir ~/Zotero --out papers \
+    --bootstrap old.bib --merge-duplicates
 ```
 
 Every later import run reads the locks in `papers/` and needs no
 `--bootstrap`:
 
 ```bash
-chitragupta-importer zotero --data-dir ~/Zotero --out papers
+chitragupta-importer zotero --data-dir ~/Zotero --out papers --merge-duplicates
+```
+
+`chitragupta-importer zotero --help`:
+
+```text
+ Usage: chitragupta-importer zotero [OPTIONS]
+
+ Import the personal Zotero library into a papers directory.
+ Reads zotero.sqlite read-only, writes the bibliography, the locks and the main
+ PDFs under --out, and prints a summary. A refused import run writes nothing
+ and exits 1.
+
+╭─ Locations ──────────────────────────────────────────────────────────────────╮
+│ *  --data-dir   DIRECTORY  Zotero data directory, holding zotero.sqlite and  │
+│                            storage/; only read. Zotero shows it under Zotero │
+│                            Settings → Advanced → Files and Folders.          │
+│                            [required]                                        │
+│ *  --out        DIRECTORY  Papers directory to write; created if missing.    │
+│                            Nothing is written outside it. [required]         │
+│    --bootstrap  FILE       Existing bibliography whose citekeys to freeze in │
+│                            a new citekey lock; first import run only.        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Behaviour ──────────────────────────────────────────────────────────────────╮
+│ --merge-duplicates  Merge each duplicate group into one item instead of      │
+│                     refusing the import run.                                 │
+│ --dry-run           Print the summary a real import run would print, but     │
+│                     write nothing.                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --help  Show this message and exit.                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+ Examples
+
+ First import run, checked before anything is written:
+   chitragupta-importer zotero --data-dir ~/Zotero --out papers \
+       --bootstrap old.bib --merge-duplicates --dry-run
+
+ The same first import run, for real:
+   chitragupta-importer zotero --data-dir ~/Zotero --out papers \
+       --bootstrap old.bib --merge-duplicates
+
+ Every later import run (no --bootstrap; the locks hold the citekeys):
+   chitragupta-importer zotero --data-dir ~/Zotero --out papers \
+       --merge-duplicates
 ```
 
 An import run reads the personal library only; `zotero.sqlite` is opened
-read-only and nothing is written outside `--out`. It prints a summary:
-included items, left-out items by reason, new citekeys, collection
-changes and files in `papers/files/` it did not write. A refused import
-run writes nothing.
+read-only and nothing is written outside `--out`. It prints a summary: a
+table of counts (included items, left-out items by reason, new citekeys,
+duplicates, the bootstrap counts and dropped citekeys, files in
+`papers/files/` it did not write), then one line per collection change,
+duplicate, dropped citekey, unreferenced file and skipped library. A
+refused import run writes nothing, prints `Error:` and one problem per line
+to stderr and exits 1. In a terminal the output is coloured; piped or
+redirected it is plain text.
 
 Duplicate items in the library are items with the same item type, the same
 title ignoring case and punctuation, and a shared DOI, URL or identical PDF;
@@ -34,30 +94,23 @@ when bootstrapping, an existing entry whose URL matches several items that
 its title cannot tell apart makes those items duplicates too. By default an
 import run that finds duplicates lists each group (item IDs and titles),
 writes nothing and exits 1. `--merge-duplicates` merges each group, as a
-Zotero merge would:
-
-```bash
-chitragupta-importer zotero --data-dir ~/Zotero --out papers --merge-duplicates
-```
+Zotero merge would.
 
 The survivor is the item with its own PDF (among several, the one added
 first); it gains the others' collections and tags, and their attachments
 only when it has no PDF of its own. Each other item is reported as
 `duplicate <item ID> of <item ID>` and gets no entry and no citekey. When
-the bibliography given to `--bootstrap` has several entries for one merged
-item, one citekey is frozen and the summary lists the others as
-`dropped citekey: ...`, so drafts citing them can be updated. A later merge
-in Zotero that keeps the same item keeps the frozen citekey.
+the bibliography given to `--bootstrap` has several entries for one item
+(a survivor merged here, or an item whose copies were already merged in
+Zotero), one citekey is frozen and the summary lists the others as
+`dropped citekey: ...`, so drafts citing them can be updated; a dropped
+citekey is retired in the citekey lock and never given to another item. A
+later merge in Zotero that keeps the same item keeps the frozen citekey.
 
 `--dry-run` does everything but write: it creates and changes nothing
 under `--out`, refuses whatever a real import run would refuse, and prints
 the summary a real import run would print, after a first line
-`dry run: nothing written`:
-
-```bash
-chitragupta-importer zotero --data-dir ~/Zotero --out papers --bootstrap old.bib \
-    --merge-duplicates --dry-run
-```
+`dry run: nothing written`.
 
 The papers directory:
 

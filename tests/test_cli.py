@@ -8,7 +8,7 @@ from importlib.metadata import version
 
 import pytest
 from click.testing import CliRunner
-from run_fixture import NEWER, OLDER, build
+from run_fixture import NEWER, OLDER, build, row
 from zotero_fixture import ZoteroFixture
 
 from chitragupta_importer.__main__ import main
@@ -51,7 +51,7 @@ def test_zotero_command_prints_summary(tmp_path):
     data_dir = zotero_data_dir(tmp_path)
     result = CliRunner().invoke(main, ["zotero", "--data-dir", str(data_dir), "--out", str(out)])
     assert result.exit_code == 0, result.output
-    assert result.stdout == "included: 1\nnew citekeys: 1\nunreferenced files: 0\n"
+    assert row(result.stdout, "included", 1) and row(result.stdout, "new citekeys", 1)
     assert (out / "files" / "ostrander_calibrating_2024.pdf").is_file()
 
 
@@ -61,10 +61,8 @@ def test_zotero_command_bootstrap_option(tmp_path):
     args = ["zotero", "--data-dir", str(zotero_data_dir(tmp_path)), "--out", str(tmp_path / "o")]
     result = CliRunner().invoke(main, [*args, "--bootstrap", str(existing)])
     assert result.exit_code == 0, result.output
-    assert (
-        "bootstrap: matched 1, unmatched 0, ambiguous 0, not included 0, dropped 0\n"
-        in result.stdout
-    )
+    assert row(result.stdout, "bootstrap: matched", 1)
+    assert row(result.stdout, "dropped citekeys", 0)
 
 
 def test_zotero_command_refusal_exits_nonzero(tmp_path):
@@ -86,7 +84,8 @@ def test_cli_flags(tmp_path):
     assert "duplicate group: zotero:user/AAAA1111 (" in refused.stderr
     dry = CliRunner().invoke(main, [*args, "--merge-duplicates", "--dry-run"])
     assert dry.exit_code == 0, dry.output
-    assert dry.stdout.startswith("dry run: nothing written\nincluded: 1\nduplicate ")
+    assert dry.stdout.startswith("dry run: nothing written\n")
+    assert row(dry.stdout, "included", 1) and row(dry.stdout, "duplicates", 1)
     assert not out.exists()
     merged = CliRunner().invoke(main, [*args, "--merge-duplicates"])
     assert merged.exit_code == 0, merged.output

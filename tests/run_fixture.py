@@ -1,4 +1,6 @@
-"""Shared inputs for the import run tests: a Zotero library builder and snapshots."""
+"""Shared inputs for the import run tests: a Zotero library builder, snapshots, rows."""
+
+import re
 
 from zotero_fixture import ZoteroFixture
 
@@ -53,3 +55,8 @@ def existing_bibliography(tmp_path):
         encoding="utf-8",
     )
     return path
+
+
+def row(output, label, count):
+    """True when `output` has a summary table row holding just `label` and `count`."""
+    return re.search(rf"^\W*{re.escape(label)}\W+{count}\W*$", output, re.MULTILINE) is not None
