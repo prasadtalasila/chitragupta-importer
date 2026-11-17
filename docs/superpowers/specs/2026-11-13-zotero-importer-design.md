@@ -266,8 +266,8 @@ sorted by collection id, UTF-8, LF, tab-separated:
 
 ```text
 <collection id>\t<parent collection id or ->\t<segment slug>\t<name>\t<live|retired>
-zotero:user/TIDE0001\t-\ttide-pools\tTide Pools\tlive
 zotero:user/SALT0002\tzotero:user/<TP Gauges id>\tsalinity-readings\tSalinity Readings\tlive
+zotero:user/TIDE0001\t-\ttide-pools\tTide Pools\tlive
 ```
 
 Each run compares the library with the lock and reports, per
@@ -280,7 +280,7 @@ collection the item is directly in, sorted, joined by `, `. Ancestors
 are implied and not listed (an item in `a.b.c` is in `a` and `a.b`).
 
 ```bibtex
-cg-collections = {tide-pools.tp-layouts, tide-pools.tp-gauges.mooring.anchor}
+cg-collections = {tide-pools.tp-gauges.mooring.anchor, tide-pools.tp-layouts}
 ```
 
 **The name table.** At the top of `bibliography.bib`, one comment block

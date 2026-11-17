@@ -7,7 +7,7 @@ import click
 from chitragupta_importer.bootstrap import BootstrapRefused
 from chitragupta_importer.citekeys import UnsafeCitekey
 from chitragupta_importer.run import ImportRefused, format_summary, import_zotero
-from chitragupta_importer.sources.zotero import UnknownSchema
+from chitragupta_importer.sources.zotero import UnknownSchema, UnreadableLibrary
 
 
 @click.group()
@@ -46,8 +46,16 @@ def zotero(
 ) -> None:
     """Import the personal Zotero library into a papers directory."""
     try:
-        summary = import_zotero(data_dir, out, bootstrap_from, merge_duplicates, dry_run)
-    except (UnknownSchema, UnsafeCitekey, BootstrapRefused, ImportRefused) as error:
+        summary = import_zotero(
+            data_dir, out, bootstrap_from, merge_duplicates=merge_duplicates, dry_run=dry_run
+        )
+    except (
+        UnknownSchema,
+        UnreadableLibrary,
+        UnsafeCitekey,
+        BootstrapRefused,
+        ImportRefused,
+    ) as error:
         raise click.ClickException(str(error)) from error
     click.echo(format_summary(summary), nl=False)
 

@@ -30,7 +30,7 @@ from bibtexparser.bparser import BibTexParser
 from chitragupta_importer.bootstrap import BootstrapRefused
 from chitragupta_importer.citekeys import UnsafeCitekey, key_stem
 from chitragupta_importer.run import DuplicatesFound, ImportRefused, plan_import
-from chitragupta_importer.sources.zotero import UnknownSchema, read_library
+from chitragupta_importer.sources.zotero import UnknownSchema, UnreadableLibrary, read_library
 
 IGNORED = frozenset(["ID", "file", "groups", "cg-collections"])
 _CLASH_SUFFIX = re.compile(r"-[0-9]+$")
@@ -76,7 +76,13 @@ def main(data_dir: Path, existing_bib: Path, merge: bool) -> None:
             plan, summary = plan_import(data_dir, Path(scratch) / "papers", existing_bib, merge)
         except DuplicatesFound as error:
             sys.exit(f"import run refused: {len(error.groups)} duplicate groups found")
-        except (UnknownSchema, UnsafeCitekey, BootstrapRefused, ImportRefused) as error:
+        except (
+            UnknownSchema,
+            UnreadableLibrary,
+            UnsafeCitekey,
+            BootstrapRefused,
+            ImportRefused,
+        ) as error:
             sys.exit(f"import run refused: {error}")
     result = summary.bootstrap
     print(

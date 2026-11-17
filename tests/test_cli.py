@@ -1,5 +1,6 @@
 """The console entry point: version, help and `python -m`."""
 
+import sqlite3
 import subprocess
 import sys
 from importlib.metadata import version
@@ -89,3 +90,36 @@ def test_cli_flags(tmp_path):
     assert merged.exit_code == 0, merged.output
     assert merged.stdout == dry.stdout.removeprefix("dry run: nothing written\n")
     assert (out / "citekeys.lock").is_file()
+
+
+def _refused(data_dir, out):
+    result = CliRunner().invoke(main, ["zotero", "--data-dir", str(data_dir), "--out", str(out)])
+    assert result.exit_code == 1, result.output
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert result.stdout == ""
+    assert not out.exists()
+    return result.stderr
+
+
+def test_data_dir_without_database_refused(tmp_path):
+    (tmp_path / "empty").mkdir()
+    stderr = _refused(tmp_path / "empty", tmp_path / "out")
+    assert stderr.startswith("Error: ") and "zotero.sqlite" in stderr and "Traceback" not in stderr
+
+
+def test_corrupt_database_refused(tmp_path):
+    data_dir = tmp_path / "zotero"
+    data_dir.mkdir()
+    (data_dir / "zotero.sqlite").write_bytes(b"not a database at all, just text" * 64)
+    stderr = _refused(data_dir, tmp_path / "out")
+    assert stderr.startswith("Error: ") and "zotero.sqlite" in stderr
+
+
+def test_library_without_personal_library_refused(tmp_path):
+    data_dir = zotero_data_dir(tmp_path)
+    conn = sqlite3.connect(data_dir / "zotero.sqlite")
+    conn.execute("DELETE FROM libraries WHERE type = 'user'")
+    conn.commit()
+    conn.close()
+    stderr = _refused(data_dir, tmp_path / "out")
+    assert stderr.startswith("Error: ") and "personal library" in stderr

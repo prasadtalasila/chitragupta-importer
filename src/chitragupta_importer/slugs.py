@@ -48,7 +48,23 @@ def parse_collection_lock(text: str) -> dict[str, CollectionRecord]:
                 raise ValueError(f"line {number}: status {status!r} is not live or retired")
             parent = None if parent_id == "-" else parent_id
             records[collection_id] = CollectionRecord(collection_id, parent, slug, name, status)
+    _refuse_cycles(records)
     return records
+
+
+def _refuse_cycles(records: Mapping[str, CollectionRecord]) -> None:
+    """ValueError naming the collection IDs if parent links form a cycle (self-parent included)."""
+    checked: set[str] = set()
+    for start in sorted(records):
+        trail: list[str] = []
+        current: str | None = start
+        while current in records and current not in checked:
+            if current in trail:
+                cycle = sorted(trail[trail.index(current) :])
+                raise ValueError(f"parent links form a cycle: {', '.join(cycle)}")
+            trail.append(current)
+            current = records[current].parent_id
+        checked.update(trail)
 
 
 def format_collection_lock(records: Mapping[str, CollectionRecord]) -> str:

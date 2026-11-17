@@ -1,8 +1,10 @@
 """Read a Zotero data directory's personal library into plain records.
 
-The reader copies `zotero.sqlite` (and its `-wal` file, present while
-Zotero runs) into a temporary directory and opens only the copy, so the
-original is never opened at all.
+The reader copies `zotero.sqlite`, and its `-journal` or `-wal` file when
+present, into a temporary directory and opens only the copy, so the
+originals are never opened at all. SQLite rolls a copied hot journal back
+when it opens the copy. A database that changes size or modification time
+while it is copied is copied again, at most `_COPY_ATTEMPTS` times in all.
 """
 
 import re
@@ -17,6 +19,8 @@ from chitragupta_importer.model import Attachment, Collection, Creator, Item, Li
 KNOWN_SCHEMA_VERSIONS = frozenset({121})
 
 _DATABASE = "zotero.sqlite"
+_SIDE_FILES = ("-journal", "-wal")
+_COPY_ATTEMPTS = 3
 _STORAGE_PREFIX = "storage:"
 _PATH_PREFIX = re.compile(r"^(storage|attachments):")
 _ABSOLUTE_PATH = re.compile(r"^(/|[A-Za-z]:[\\/])")
@@ -50,6 +54,10 @@ _MEMBERSHIPS = f"""
     WHERE {_LIVE_COLLECTIONS}"""
 
 
+class UnreadableLibrary(Exception):
+    """A Zotero data directory whose personal library cannot be read."""
+
+
 class UnknownSchema(Exception):
     """The Zotero database has a `userdata` schema version this reader does not know."""
 
@@ -57,21 +65,49 @@ class UnknownSchema(Exception):
 def read_library(data_dir: Path) -> Library:
     """Read the personal library of the Zotero data directory `data_dir`."""
     data_dir = Path(data_dir).absolute()
+    database = data_dir / _DATABASE
+    if not database.is_file():
+        raise UnreadableLibrary(f"{database}: no Zotero database found")
     with tempfile.TemporaryDirectory() as copy_dir:
         conn = sqlite3.connect(_copy_database(data_dir, Path(copy_dir)))
         try:
             _check_schema(conn)
             return _read(conn, data_dir)
+        except sqlite3.DatabaseError as error:
+            raise UnreadableLibrary(
+                f"{database}: not a readable Zotero database ({error})"
+            ) from error
         finally:
             conn.close()
 
 
 def _copy_database(data_dir: Path, copy_dir: Path) -> Path:
-    shutil.copyfile(data_dir / _DATABASE, copy_dir / _DATABASE)
-    wal = data_dir / f"{_DATABASE}-wal"
-    if wal.exists():
-        shutil.copyfile(wal, copy_dir / wal.name)
-    return copy_dir / _DATABASE
+    """Copy the database and its side files until the database stays unchanged throughout."""
+    database = data_dir / _DATABASE
+    for _ in range(_COPY_ATTEMPTS):
+        before = _signature(database)
+        shutil.copyfile(database, copy_dir / _DATABASE)
+        for suffix in _SIDE_FILES:
+            _copy_side_file(data_dir / f"{_DATABASE}{suffix}", copy_dir)
+        if _signature(database) == before:
+            return copy_dir / _DATABASE
+    raise UnreadableLibrary(
+        f"{database}: kept changing while it was copied ({_COPY_ATTEMPTS} attempts);"
+        " try again when Zotero is idle"
+    )
+
+
+def _signature(path: Path) -> tuple[int, int]:
+    status = path.stat()
+    return status.st_size, status.st_mtime_ns
+
+
+def _copy_side_file(side: Path, copy_dir: Path) -> None:
+    """Copy `side` into `copy_dir`; when it is gone, drop any copy from an earlier attempt."""
+    try:
+        shutil.copyfile(side, copy_dir / side.name)
+    except FileNotFoundError:
+        (copy_dir / side.name).unlink(missing_ok=True)
 
 
 def _check_schema(conn: sqlite3.Connection) -> None:
@@ -85,7 +121,10 @@ def _check_schema(conn: sqlite3.Connection) -> None:
 
 
 def _read(conn: sqlite3.Connection, data_dir: Path) -> Library:
-    (library_id,) = conn.execute("SELECT libraryID FROM libraries WHERE type = 'user'").fetchone()
+    row = conn.execute("SELECT libraryID FROM libraries WHERE type = 'user'").fetchone()
+    if row is None:
+        raise UnreadableLibrary(f"{data_dir / _DATABASE}: no personal library (type 'user') found")
+    (library_id,) = row
     groups = conn.execute("SELECT groupID FROM groups ORDER BY groupID").fetchall()
     return Library(
         items=_items(conn, data_dir, library_id),

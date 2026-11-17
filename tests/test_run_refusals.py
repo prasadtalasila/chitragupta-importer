@@ -50,6 +50,20 @@ def test_collection_lock_with_unknown_status_refused(tmp_path):
     assert snapshot(out) == before
 
 
+def test_collection_lock_with_parent_cycle_refused(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "collections.lock").write_text(
+        "zotero:user/COLL0001\tzotero:user/COLL0002\ttide-pools\tTide Pools\tlive\n"
+        "zotero:user/COLL0002\tzotero:user/COLL0001\tgauges\tGauges\tlive\n",
+        encoding="utf-8",
+    )
+    before = snapshot(out)
+    with pytest.raises(ImportRefused, match="collections.lock.*cycle: zotero:user/COLL0001, "):
+        import_zotero(build(tmp_path, OSTRANDER), out)
+    assert snapshot(out) == before
+
+
 def test_unreadable_item_pdf_during_bootstrap_names_the_pdf(tmp_path, monkeypatch):
     data_dir, out = build(tmp_path, OSTRANDER), tmp_path / "out"
     pdf = next((data_dir / "storage").rglob("paper.pdf"))

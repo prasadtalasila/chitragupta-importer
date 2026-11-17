@@ -87,6 +87,31 @@ def test_url_tie_narrowed_to_items_with_entry_title(tmp_path):
     assert url_tie_groups(bib, lib) == [frozenset({SURVIVOR, "zotero:user/BBBB2222"})]
 
 
+def test_ties_at_doi_or_pdf_level_make_no_group(tmp_path):
+    pdf = tmp_path / "storage" / "shared.pdf"
+    pdf.parent.mkdir(parents=True)
+    pdf.write_bytes(b"%PDF shared")
+    attachment = (Attachment("application/pdf", pdf, "shared.pdf"),)
+    lib = library(
+        item("AAAA1111", "Twins, part one", url=URL, DOI=DOI),
+        item("BBBB2222", "Twins, part two", url=URL, DOI=DOI),
+        item("CCCC3333", "Gauges, part one", attachments=attachment, url=URL),
+        item("DDDD4444", "Gauges, part two", attachments=attachment, url=URL),
+    )
+    entry_pdf = tmp_path / "existing" / "gauges.pdf"
+    entry_pdf.parent.mkdir(parents=True)
+    entry_pdf.write_bytes(b"%PDF shared")
+    bib = existing_bib(
+        tmp_path,
+        ("smith_twins_2024", {"title": "Twins", "doi": DOI, "url": URL}),
+        (
+            "smith_gauges_2024",
+            {"title": "Gauges", "url": URL, "file": ":gauges.pdf:application/pdf"},
+        ),
+    )
+    assert not url_tie_groups(bib, lib)
+
+
 def merged_copies(tmp_path, a_bytes, b_bytes):
     """Copies A (older, the survivor) and B with PDFs; the merged library and survivor PDFs."""
     copies = []

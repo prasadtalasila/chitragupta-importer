@@ -150,7 +150,7 @@ def plan_import(
     """Everything an import run would write into `out_dir`, and its summary; writes nothing.
 
     Raises ImportRefused (DuplicatesFound included), UnknownSchema,
-    BootstrapRefused or UnsafeCitekey.
+    UnreadableLibrary, BootstrapRefused or UnsafeCitekey.
     """
     check_bootstrap(out_dir / CITEKEY_LOCK, bootstrap_from)
     library, duplicates, survivor_pdfs = merged_library(data_dir, bootstrap_from, merge)
@@ -159,10 +159,11 @@ def plan_import(
     return plan, replace(summary, bootstrap=bootstrapped, duplicates=duplicates)
 
 
-def import_zotero(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+def import_zotero(
     data_dir: Path,
     out_dir: Path,
     bootstrap_from: Path | None = None,
+    *,
     merge_duplicates: bool = False,
     dry_run: bool = False,
 ) -> RunSummary:

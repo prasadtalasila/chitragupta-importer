@@ -125,3 +125,10 @@ def test_dry_run_still_refuses_bootstrap_with_existing_lock(tmp_path):
     import_zotero(data_dir, out)
     with pytest.raises(ImportRefused, match="citekeys.lock"):
         import_zotero(data_dir, out, existing_bibliography(tmp_path), dry_run=True)
+
+
+def test_flags_are_keyword_only(tmp_path):
+    data_dir, out = build(tmp_path, OSTRANDER), tmp_path / "out"
+    with pytest.raises(TypeError):
+        import_zotero(data_dir, out, None, True)  # pylint: disable=too-many-function-args
+    assert not out.exists()
