@@ -1,26 +1,31 @@
-# Duplicate items are merged in code, keeping Zotero's default master
+# Duplicate items are merged in code, on request
 
-The Zotero data holds 34 groups of duplicate items (same type, same title,
-shared DOI or PDF), and the existing bibliography has an entry for each copy
-in 24 of them. The importer merges each group itself before anything else:
-one survivor carries the group's attachments, collections and tags, the
-others are reported as duplicates. The survivor is the item Zotero's own
-merge would keep by default (oldest date added), so cleaning up in Zotero
-later with the default master changes no frozen citekey. When several
-existing entries name one merged item, bootstrap freezes one key by a fixed
-rule and lists the rest as dropped, so drafts citing them can be updated.
+The Zotero data holds 48 groups of duplicate items (same type and title, with
+a shared DOI, URL or PDF). Zotero's exporter keeps every copy as its own
+entry, the later one with a `-1` clash suffix, so the existing bibliography
+has an entry for each copy. An import run finds the groups itself and, by
+default, lists them and refuses to write; with `--merge-duplicates` it keeps
+one survivor per group (the copy with its own PDF, else the oldest) and
+reports the rest. Bootstrap freezes the key of the entry that matched the
+survivor's own PDF and lists the other keys as dropped, so drafts citing
+them can be updated; `--dry-run` shows all of this before anything is
+written.
 
 ## Considered Options
 
 - **Merge only in Zotero.** Cleans the library, but the importer would still
-  refuse on the next duplicate and still needs the dropped-key rule.
-- **Give the survivor every entry's key.** Impossible: an entry has one
-  citekey and chitragupta reads no aliases.
+  need the dropped-key rule for the existing bibliography.
+- **Keep every copy, as Zotero's exporter does.** Gives chitragupta two
+  entries and two PDFs for one work.
+- **Survivor = Zotero's default merge master (the oldest).** Rejected: the
+  copy with the PDF is the one worth keeping.
 
 ## Consequences
 
-- Merging in Zotero with a non-default master retires the frozen key and
-  creates a new one (see chitragupta-importer#4).
+- Merging in Zotero later with a master other than the survivor retires the
+  frozen key and creates a new one (see chitragupta-importer#4).
+- A URL alone groups items only through a bootstrap tie that the title
+  cannot break, so a generic URL shared by distinct works does not merge them.
 - The grouping takes any items and a pluggable survivor rule, ready for
   duplicates across reference managers once an import run reads several
   libraries.

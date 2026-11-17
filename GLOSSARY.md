@@ -52,13 +52,14 @@ _Avoid_: primary PDF, full text
 
 **Duplicate group**:
 Items of one library that are the same work: same item type, same
-normalised title, and a shared DOI or identical PDF bytes.
+normalised title, and a shared DOI, URL or identical PDF bytes; or items an
+existing entry ties at the URL level that the title cannot separate.
 _Avoid_: duplicate set, clones
 
 **Survivor**:
-The one item of a duplicate group that is imported, carrying the group's
-attachments, collection memberships and tags; the others are reported as
-duplicates of it.
+The one item of a duplicate group that is imported: the one with its own
+PDF, else the oldest; it carries the group's collection memberships and
+tags, and the others are reported as duplicates of it.
 _Avoid_: master, canonical item
 
 ## Import
