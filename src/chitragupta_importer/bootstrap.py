@@ -16,9 +16,10 @@ from chitragupta_importer.citekeys import citekey_problem
 from chitragupta_importer.model import Item, Library
 from chitragupta_importer.normalise import hash_file as _hash_file
 from chitragupta_importer.normalise import item_dois as _item_dois
+from chitragupta_importer.normalise import item_pdf_hashes
 from chitragupta_importer.normalise import normal_doi as _doi
 from chitragupta_importer.normalise import normal_title as _title
-from chitragupta_importer.pdfs import LeftOutReason, is_pdf, main_pdf
+from chitragupta_importer.pdfs import LeftOutReason, main_pdf
 
 _ESCAPE = re.compile(r"\\(.)")
 
@@ -54,17 +55,9 @@ def _entry_pdf_hashes(entry: dict[str, str], directory: Path) -> set[str]:
     return hashes
 
 
-def _item_pdf_hashes(item: Item) -> set[str]:
-    return {
-        _hash_file(a.path)
-        for a in item.attachments
-        if is_pdf(a) and a.path is not None and a.path.is_file()
-    }
-
-
 _Level = tuple[Callable[[Item], set[str]], Callable[[dict[str, str], Path], set[str]]]
 _LEVELS: tuple[_Level, ...] = (
-    (_item_pdf_hashes, _entry_pdf_hashes),
+    (item_pdf_hashes, _entry_pdf_hashes),
     (_item_dois, lambda e, _: {_doi(e.get("doi", ""))}),
     (lambda i: {i.fields.get("url", "")}, lambda e, _: {e.get("url", "")}),
     (lambda i: {_title(i.fields.get("title", ""))}, lambda e, _: {_title(e.get("title", ""))}),

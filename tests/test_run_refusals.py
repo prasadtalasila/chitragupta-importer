@@ -57,7 +57,7 @@ def test_unreadable_item_pdf_during_bootstrap_names_the_pdf(tmp_path, monkeypatc
     def refuse(path):
         raise PermissionError(13, "Permission denied", str(path))
 
-    monkeypatch.setattr("chitragupta_importer.bootstrap._hash_file", refuse)
+    monkeypatch.setattr("chitragupta_importer.normalise.hash_file", refuse)
     with pytest.raises(ImportRefused) as refused:
         import_zotero(data_dir, out, bootstrap_from=existing_bibliography(tmp_path))
     assert str(pdf) in str(refused.value)
@@ -142,7 +142,7 @@ def test_bootstrap_oserror_without_filename_shows_the_error(tmp_path, monkeypatc
     def fail(path):
         raise OSError(f"device gone while reading {path.name}")
 
-    monkeypatch.setattr("chitragupta_importer.bootstrap._hash_file", fail)
+    monkeypatch.setattr("chitragupta_importer.normalise.hash_file", fail)
     with pytest.raises(ImportRefused, match="device gone while reading paper.pdf") as refused:
         import_zotero(build(tmp_path, RICHSTEIN), tmp_path / "out", existing_bibliography(tmp_path))
     assert "None" not in str(refused.value)
