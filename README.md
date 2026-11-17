@@ -28,6 +28,16 @@ included items, left-out items by reason, new citekeys, collection
 changes and files in `papers/files/` it did not write. A refused import
 run writes nothing.
 
+Duplicate items in the library (same item type, same title ignoring case
+and punctuation, and a shared DOI or identical PDF) are merged before
+anything else, as a Zotero merge would: the item added first survives and
+gains the others' attachments, collections and tags. Each other item is
+reported as `duplicate <item ID> of <item ID>` and gets no entry and no
+citekey. When the bibliography given to `--bootstrap` has several entries
+for one merged item, one citekey is frozen and the summary lists the others
+as `dropped citekey: ...`, so drafts citing them can be updated. A later
+merge in Zotero that keeps the default master keeps the frozen citekey.
+
 The papers directory:
 
 ```text

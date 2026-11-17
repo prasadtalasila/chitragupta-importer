@@ -31,7 +31,7 @@ def merge_duplicates(library: Library, survivor: Survivor) -> tuple[Library, dic
     for group in _groups(library.items):
         kept = survivor(group)
         merged[kept.item_id] = _merge(kept, group)
-        duplicates.update({m.item_id: kept.item_id for m in group if m is not kept})
+        duplicates.update({m.item_id: kept.item_id for m in group if m.item_id != kept.item_id})
     items = [merged.get(i.item_id, i) for i in library.items if i.item_id not in duplicates]
     return replace(library, items=tuple(sorted(items, key=lambda i: i.item_id))), duplicates
 
@@ -75,7 +75,7 @@ def _shared_identifier_groups(items: list[Item]) -> list[list[Item]]:
 
 def _merge(kept: Item, group: Sequence[Item]) -> Item:
     """The survivor with every member's attachments, collections and tags."""
-    others = sorted((m for m in group if m is not kept), key=lambda i: i.item_id)
+    others = sorted((m for m in group if m.item_id != kept.item_id), key=lambda i: i.item_id)
     members = [kept, *others]
     tags = {tag for m in members for tag in m.tags}
     return replace(

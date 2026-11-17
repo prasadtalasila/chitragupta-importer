@@ -128,18 +128,23 @@ def test_format_summary_lists_every_line_in_order():
         collection_changes=("new x", "retired y"),
         unreferenced=("old.pdf", "stray.pdf"),
         skipped_libraries=("zotero:group-7",),
-        bootstrap=BootstrapResult({"i": "k"}, ("u1", "u2"), (), ("n1",)),
+        bootstrap=BootstrapResult({"i": "k"}, ("u1", "u2"), (), ("n1",), ("k-1", "k-2")),
+        duplicates={"zotero:user/E": "zotero:user/D", "zotero:user/C2": "zotero:user/D"},
     )
     assert format_summary(summary) == (
         "included: 3\n"
         "left out (no attachment): 1\n"
         "left out (PDF missing on disk): 2\n"
+        "duplicate zotero:user/C2 of zotero:user/D\n"
+        "duplicate zotero:user/E of zotero:user/D\n"
         "new citekeys: 2\n"
         "new x\n"
         "retired y\n"
         "unreferenced files: 2: old.pdf, stray.pdf\n"
         "skipped libraries: zotero:group-7\n"
-        "bootstrap: matched 1, unmatched 2, ambiguous 0, not included 1\n"
+        "bootstrap: matched 1, unmatched 2, ambiguous 0, not included 1, dropped 2\n"
+        "dropped citekey: k-1\n"
+        "dropped citekey: k-2\n"
     )
 
 

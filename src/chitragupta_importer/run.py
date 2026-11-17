@@ -5,7 +5,7 @@ run leaves the output directory as it was.
 """
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from chitragupta_importer.bibtex import render_bibliography, render_entry, render_name_table
@@ -17,6 +17,7 @@ from chitragupta_importer.citekeys import (
     key_stem,
     parse_citekey_lock,
 )
+from chitragupta_importer.duplicates import merge_duplicates, oldest_added
 from chitragupta_importer.model import Item, Library
 from chitragupta_importer.pdfs import LeftOutReason, main_pdf
 from chitragupta_importer.slugs import (
@@ -41,8 +42,12 @@ class ImportRefused(Exception):
 
 
 @dataclass(frozen=True)
-class RunSummary:
-    """What an import run did; `left_out` maps a reason to sorted item IDs."""
+class RunSummary:  # pylint: disable=too-many-instance-attributes
+    """What an import run did.
+
+    `left_out` maps a reason to sorted item IDs; `duplicates` maps each
+    non-survivor's item ID to its survivor's.
+    """
 
     included: int
     left_out: Mapping[str, tuple[str, ...]]
@@ -51,6 +56,7 @@ class RunSummary:
     unreferenced: tuple[str, ...]
     skipped_libraries: tuple[str, ...]
     bootstrap: BootstrapResult | None
+    duplicates: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -89,7 +95,23 @@ def _split(library: Library) -> tuple[dict[str, tuple[Item, Path]], dict[str, tu
     return included, {reason: tuple(sorted(left_out[reason])) for reason in ordered}
 
 
-def _seed_lock(out_dir: Path, library: Library, bootstrap_from: Path | None):
+def _cannot_read(error: OSError, stage: str) -> ImportRefused:
+    """The refusal for an `error` while reading item files `stage` (e.g. "during bootstrap")."""
+    if error.filename is None:
+        return ImportRefused(f"cannot read {stage}: {error}")
+    return ImportRefused(f"{error.filename}: cannot read {stage} ({error.strerror})")
+
+
+def _merged_library(data_dir: Path) -> tuple[Library, dict[str, str]]:
+    """The library in `data_dir` with each duplicate group merged into its survivor."""
+    library = read_library(data_dir)
+    try:
+        return merge_duplicates(library, oldest_added)
+    except OSError as error:
+        raise _cannot_read(error, "while merging duplicate items") from error
+
+
+def _seed_lock(out_dir: Path, library: Library, bootstrap_from: Path | None, merged: set[str]):
     """The citekey lock to start from, and the bootstrap result when bootstrapping."""
     lock_path = out_dir / CITEKEY_LOCK
     if bootstrap_from is None:
@@ -101,11 +123,9 @@ def _seed_lock(out_dir: Path, library: Library, bootstrap_from: Path | None):
     except (OSError, UnicodeDecodeError) as error:
         raise ImportRefused(f"{bootstrap_from}: cannot read the bibliography ({error})") from error
     try:
-        result = bootstrap(bootstrap_from, library)
+        result = bootstrap(bootstrap_from, library, merged)
     except OSError as error:
-        if error.filename is None:
-            raise ImportRefused(f"cannot read during bootstrap: {error}") from error
-        raise ImportRefused(f"{error.filename}: cannot read ({error.strerror})") from error
+        raise _cannot_read(error, "during bootstrap") from error
     return dict(result.lock), result
 
 
@@ -159,12 +179,11 @@ def import_zotero(data_dir: Path, out_dir: Path, bootstrap_from: Path | None = N
     Raises ImportRefused, UnknownSchema, BootstrapRefused or UnsafeCitekey before
     anything is written.
     """
-    library = read_library(data_dir)
+    library, duplicates = _merged_library(data_dir)
     included, left_out = _split(library)
-    lock, bootstrapped = _seed_lock(out_dir, library, bootstrap_from)
+    lock, bootstrapped = _seed_lock(out_dir, library, bootstrap_from, set(duplicates.values()))
     collection_lock = _read_lock(out_dir / COLLECTION_LOCK, parse_collection_lock)
-    stems = {item_id: key_stem(item) for item_id, (item, _) in included.items()}
-    lock, new_ids = assign_citekeys(stems, lock)
+    lock, new_ids = assign_citekeys({i: key_stem(item) for i, (item, _) in included.items()}, lock)
     _check_citekeys(included, lock)
     used = {c for item, _ in included.values() for c in item.collection_ids}
     records, changes = update_collections(collection_lock, library.collections, used)
@@ -183,6 +202,7 @@ def import_zotero(data_dir: Path, out_dir: Path, bootstrap_from: Path | None = N
         unreferenced=tuple(unreferenced_files(out_dir / FILES, set(plan.pdfs))),
         skipped_libraries=library.skipped_libraries,
         bootstrap=bootstrapped,
+        duplicates=duplicates,
     )
 
 
@@ -190,6 +210,7 @@ def format_summary(summary: RunSummary) -> str:
     """The import run summary printed to stdout, one fact per line."""
     lines = [f"included: {summary.included}"]
     lines += [f"left out ({reason}): {len(ids)}" for reason, ids in summary.left_out.items()]
+    lines += [f"duplicate {i} of {summary.duplicates[i]}" for i in sorted(summary.duplicates)]
     lines.append(f"new citekeys: {len(summary.new_citekeys)}")
     lines += summary.collection_changes
     unreferenced = f"unreferenced files: {len(summary.unreferenced)}"
@@ -199,9 +220,15 @@ def format_summary(summary: RunSummary) -> str:
     if summary.skipped_libraries:
         lines.append("skipped libraries: " + ", ".join(summary.skipped_libraries))
     if summary.bootstrap is not None:
-        result = summary.bootstrap
-        lines.append(
-            f"bootstrap: matched {len(result.lock)}, unmatched {len(result.unmatched)}, "
-            f"ambiguous {len(result.ambiguous)}, not included {len(result.not_included)}"
-        )
+        lines += _bootstrap_lines(summary.bootstrap)
     return "".join(f"{line}\n" for line in lines)
+
+
+def _bootstrap_lines(result: BootstrapResult) -> list[str]:
+    """The bootstrap counts, then one line per dropped citekey."""
+    counts = (
+        f"bootstrap: matched {len(result.lock)}, unmatched {len(result.unmatched)}, "
+        f"ambiguous {len(result.ambiguous)}, not included {len(result.not_included)}, "
+        f"dropped {len(result.dropped)}"
+    )
+    return [counts, *(f"dropped citekey: {citekey}" for citekey in sorted(result.dropped))]

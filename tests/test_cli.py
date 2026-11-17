@@ -57,7 +57,10 @@ def test_zotero_command_bootstrap_option(tmp_path):
     args = ["zotero", "--data-dir", str(zotero_data_dir(tmp_path)), "--out", str(tmp_path / "o")]
     result = CliRunner().invoke(main, [*args, "--bootstrap", str(existing)])
     assert result.exit_code == 0, result.output
-    assert "bootstrap: matched 1, unmatched 0, ambiguous 0, not included 0\n" in result.stdout
+    assert (
+        "bootstrap: matched 1, unmatched 0, ambiguous 0, not included 0, dropped 0\n"
+        in result.stdout
+    )
 
 
 def test_zotero_command_refusal_exits_nonzero(tmp_path):

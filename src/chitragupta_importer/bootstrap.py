@@ -128,15 +128,12 @@ def _refusals(
             yield f"unsafe citekey {citekey!r}: {problem}"
 
 
-def bootstrap(existing: Path, library: Library, merged: Set[str] = frozenset()) -> BootstrapResult:
-    """Match the existing bibliography's entries to items; refuse if any match is unsafe.
-
-    `merged` holds the item IDs of survivors that absorbed at least one other
-    item; only those may be claimed by several entries.
-    """
+def _match_entries(
+    existing: Path, library: Library
+) -> tuple[list[tuple[str, set[str]]], dict[str, list[str]]]:
+    """Each entry's citekey with the item IDs it matches; and item ID -> its sole claimants."""
     indexes = _index(library)
-    items = {item.item_id: item for item in library.items}
-    titles = {item_id: _item_title(item) for item_id, item in items.items()}
+    titles = {item.item_id: _item_title(item) for item in library.items}
     matches: list[tuple[str, set[str]]] = []
     claims: dict[str, list[str]] = {}
     for entry in _read_entries(existing):
@@ -144,16 +141,35 @@ def bootstrap(existing: Path, library: Library, merged: Set[str] = frozenset()) 
         matches.append((entry["ID"], found))
         if len(found) == 1:
             claims.setdefault(next(iter(found)), []).append(entry["ID"])
-    frozen = {i: _frozen_citekey(claims[i], key_stem(items[i])) for i in sorted(claims)}
-    problems = list(_refusals(matches, claims, merged, frozen))
-    if problems:
-        raise BootstrapRefused("bootstrap refused: " + "; ".join(problems))
+    return matches, claims
+
+
+def _split_frozen(
+    frozen: Mapping[str, str], items: Mapping[str, Item]
+) -> tuple[dict[str, str], list[str]]:
+    """The frozen citekeys of included items (the lock), and those of left-out items."""
     lock, not_included = {}, []
     for item_id, citekey in frozen.items():
         if isinstance(main_pdf(items[item_id]), LeftOutReason):
             not_included.append(citekey)
         else:
             lock[item_id] = citekey
-    unmatched = sorted(citekey for citekey, found in matches if not found)
-    dropped = sorted(c for i, cs in claims.items() for c in cs if c != frozen[i])
-    return BootstrapResult(lock, tuple(unmatched), (), tuple(sorted(not_included)), tuple(dropped))
+    return lock, not_included
+
+
+def bootstrap(existing: Path, library: Library, merged: Set[str] = frozenset()) -> BootstrapResult:
+    """Match the existing bibliography's entries to items; refuse if any match is unsafe.
+
+    `merged` holds the item IDs of survivors that absorbed at least one other
+    item; only those may be claimed by several entries.
+    """
+    items = {item.item_id: item for item in library.items}
+    matches, claims = _match_entries(existing, library)
+    frozen = {i: _frozen_citekey(claims[i], key_stem(items[i])) for i in sorted(claims)}
+    problems = list(_refusals(matches, claims, merged, frozen))
+    if problems:
+        raise BootstrapRefused("bootstrap refused: " + "; ".join(problems))
+    lock, not_included = _split_frozen(frozen, items)
+    unmatched = tuple(sorted(citekey for citekey, found in matches if not found))
+    dropped = tuple(sorted(c for i, cs in claims.items() for c in cs if c != frozen[i]))
+    return BootstrapResult(lock, unmatched, (), tuple(sorted(not_included)), dropped)

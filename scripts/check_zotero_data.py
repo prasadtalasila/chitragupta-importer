@@ -5,7 +5,8 @@ Usage: check_zotero_data.py ZOTERO_DATA_DIR EXISTING_BIB OUT_DIR
 Runs one import run with bootstrap from EXISTING_BIB into OUT_DIR (which must
 be empty or absent) and prints aggregate numbers only:
 
-- the bootstrap counts;
+- the bootstrap counts, dropped citekeys included;
+- the number of duplicate items and of the groups they were merged into;
 - the key-rule match rate: how many frozen citekeys, with any clash suffix
   stripped, equal the key stem the key rule gives their item;
 - per field name, how many frozen entries differ between EXISTING_BIB and the
@@ -74,9 +75,14 @@ def main(data_dir: Path, existing_bib: Path, out_dir: Path) -> None:
     result = summary.bootstrap
     print(
         f"bootstrap: matched {len(result.lock)}, unmatched {len(result.unmatched)}, "
-        f"ambiguous {len(result.ambiguous)}, not included {len(result.not_included)}"
+        f"ambiguous {len(result.ambiguous)}, not included {len(result.not_included)}, "
+        f"dropped {len(result.dropped)}"
     )
+    groups = len(set(summary.duplicates.values()))
+    print(f"duplicates: {len(summary.duplicates)} items merged into {groups} groups")
     print(f"included {summary.included}, new citekeys {len(summary.new_citekeys)}")
+    left_out = ", ".join(f"{reason} {len(ids)}" for reason, ids in summary.left_out.items())
+    print(f"left out: {left_out or 'none'}")
     matches = key_rule_matches(data_dir, result.lock)
     total = len(result.lock)
     print(f"key rule: {matches} of {total} frozen citekeys ({100 * matches / total:.1f}%)")

@@ -1,5 +1,7 @@
 """Grouping duplicate items of one library and merging each group into its survivor."""
 
+from dataclasses import replace
+
 from chitragupta_importer.duplicates import merge_duplicates, oldest_added
 from chitragupta_importer.model import Attachment, Collection, Creator, Item, Library
 from chitragupta_importer.pdfs import main_pdf
@@ -199,3 +201,12 @@ def test_custom_survivor_rule_is_used():
     merged, duplicates = merge_duplicates(lib, lambda items: max(items, key=lambda i: i.item_id))
     assert ids(merged) == ["zotero:user/BBBB"]
     assert duplicates == {"zotero:user/AAAA": "zotero:user/BBBB"}
+
+
+def test_survivor_matched_by_item_id_not_identity(tmp_path):
+    first = with_doi("AAAA", "10.1/a", attachments=(pdf(tmp_path / "a", "a.pdf", b"%PDF-a"),))
+    second = with_doi("BBBB", "10.1/a", attachments=(pdf(tmp_path / "b", "b.pdf", b"%PDF-b"),))
+    merged, duplicates = merge_duplicates(library(first, second), lambda items: replace(items[0]))
+    assert ids(merged) == ["zotero:user/AAAA"]
+    assert duplicates == {"zotero:user/BBBB": "zotero:user/AAAA"}
+    assert merged.items[0].attachments == first.attachments + second.attachments
