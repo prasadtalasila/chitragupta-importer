@@ -127,7 +127,7 @@ def test_oldest_added_wins_ties_by_item_id():
     )
 
 
-def test_merged_item_unions_attachments_collections_tags(tmp_path):
+def test_merged_item_unions_collections_and_tags(tmp_path):
     shared = b"%PDF shared"
     survivor = item(
         "CCCC",
@@ -159,7 +159,7 @@ def test_merged_item_unions_attachments_collections_tags(tmp_path):
     assert result.item_type == survivor.item_type
     assert result.fields == survivor.fields and result.creators == survivor.creators
     assert result.date_added == survivor.date_added
-    assert [a.file_name for a in result.attachments] == ["c.pdf", "a.pdf", "b.pdf"]
+    assert [a.file_name for a in result.attachments] == ["c.pdf"]
     assert result.collection_ids == (
         "zotero:user/COLLAAAA",
         "zotero:user/COLLBBBB",
@@ -209,4 +209,4 @@ def test_survivor_matched_by_item_id_not_identity(tmp_path):
     merged, duplicates = merge_duplicates(library(first, second), lambda items: replace(items[0]))
     assert ids(merged) == ["zotero:user/AAAA"]
     assert duplicates == {"zotero:user/BBBB": "zotero:user/AAAA"}
-    assert merged.items[0].attachments == first.attachments + second.attachments
+    assert merged.items[0].attachments == first.attachments
