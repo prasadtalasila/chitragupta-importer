@@ -132,7 +132,8 @@ citekeys.lock ──────────────────────
 - Open with a `file:` URI, `mode=ro`, absolute path, UNC-safe (as
   `populate_bib_groups.py` in chitragupta does).
 - Read `version` where `schema = 'userdata'`; refuse any value other
-  than the known ones (121 today) with a message naming the version.
+  than the known ones (121 to 131: Zotero's migrations 122-131 add only columns,
+  indexes and settings this importer does not read) with a message naming the version.
 - Zotero holds a lock while running. Builder's call how to read safely
   (copy to a temp file first, or `immutable=1`), as long as the
   original is never opened writable.
@@ -149,6 +150,9 @@ group libraries are listed as skipped (the Zotero data has none).
 
 Stored in `papers/citekeys.lock`: one line per item ever included,
 `<item ID>\t<citekey>`, sorted by item ID, UTF-8, LF.
+Bootstrap also writes each dropped citekey as `dropped:<citekey>\t<citekey>`,
+a pseudo item ID that matches no item, so that key is never given to another
+paper; like every line, it is never removed.
 
 Rules, in order:
 
@@ -193,7 +197,8 @@ those matches before assigning anything new.
   The rest (146 in the Zotero data) get none and are not included;
   an item that gains a PDF later gets a new key from the rule.
 - An entry matching no item, or more than one, is listed and gets no
-  lock line. An item claimed by two entries is an error; the run stops.
+  lock line. An item claimed by several entries freezes one citekey and
+  drops the others (see Duplicate items within a library).
 - The run prints matched, unmatched and ambiguous counts. Nothing is
   written if any entry is ambiguous.
 - `--bootstrap` with a lock already present is refused: bootstrap is
@@ -238,9 +243,9 @@ scope.
 **Slugs.** Each collection has a *segment slug*: its name lower-cased,
 ASCII-folded, every run of characters outside `[a-z0-9]` replaced by
 one `-`, leading and trailing `-` trimmed (`collection` if nothing is
-left). `Industry 5.0` becomes `industry-5-0`. A collection's *slug
+left). `Phase 2.0` becomes `phase-2-0`. A collection's *slug
 path* joins the segment slugs from the root with `.`:
-`digital-twin.dt-platforms.execution.runner`. Slugs contain only
+`tide-pools.tp-gauges.mooring.anchor`. Slugs contain only
 `[a-z0-9-.]`, so they need no escaping and no shell quoting.
 
 **Freezing.** A segment slug is created once per collection id and
@@ -266,8 +271,8 @@ sorted by collection id, UTF-8, LF, tab-separated:
 
 ```text
 <collection id>\t<parent collection id or ->\t<segment slug>\t<name>\t<live|retired>
-zotero:user/47U7HA7G\t-\tdigital-twin\tDigital Twin\tlive
-zotero:user/EQ853ET5\tzotero:user/<DT Platforms id>\tperformance-measurements\tPerformance Measurements\tlive
+zotero:user/SALT0002\tzotero:user/<TP Gauges id>\tsalinity-readings\tSalinity Readings\tlive
+zotero:user/TIDE0001\t-\ttide-pools\tTide Pools\tlive
 ```
 
 Each run compares the library with the lock and reports, per
@@ -280,7 +285,7 @@ collection the item is directly in, sorted, joined by `, `. Ancestors
 are implied and not listed (an item in `a.b.c` is in `a` and `a.b`).
 
 ```bibtex
-cg-collections = {digital-twin.dt-architectures, digital-twin.dt-platforms.execution.runner}
+cg-collections = {tide-pools.tp-gauges.mooring.anchor, tide-pools.tp-layouts}
 ```
 
 **The name table.** At the top of `bibliography.bib`, one comment block
@@ -291,10 +296,10 @@ parent rows, so names are never split and need no separator escaping):
 
 ```bibtex
 @comment{cg-collections v1
-digital-twin	Digital Twin
-digital-twin.dt-platforms	DT Platforms
-digital-twin.dt-platforms.execution	Execution
-digital-twin.dt-platforms.execution.runner	Runner
+tide-pools	Tide Pools
+tide-pools.tp-gauges	TP Gauges
+tide-pools.tp-gauges.mooring	Mooring
+tide-pools.tp-gauges.mooring.anchor	Anchor
 }
 ```
 
@@ -304,8 +309,7 @@ collection ids; those stay in the lock. (Name table in the bibliography rather
 than a sidecar: my call, so chitragupta reads only the bib.)
 
 **In the Zotero data.** 108 collections, depth up to 4, 99 distinct names
-ignoring case; 7 names reused in different branches (`Medical`,
-`Standards`, `Performance Measurements`, ...), which the slug paths keep
+ignoring case; 7 names reused in different branches, which the slug paths keep
 apart. One item sits in 4 collections. No name contains a tab, newline
 or brace.
 
@@ -324,11 +328,62 @@ collection ids. `cg-` namespaces the field because `collection` already
 names BibTeX and biblatex entry types (`@incollection`, `@collection`)
 and CSL's series variables.
 
+### Duplicate items within a library
+
+Added 2026-11-17, revised the same day, after the first run on the Zotero
+data: 69 entries of the existing bibliography matched more than one item.
+Scanning the whole library finds 48 duplicate groups (50 copies to merge
+away). Zotero's own exporter never merges: it exports every copy as its own
+entry and gives the later copy a clash suffix (`smith_twins_2024` and
+`smith_twins_2024-1`). Decision record:
+`docs/adr/0008-merge-duplicate-items-in-code.md`.
+
+**Off by default.** Without `--merge-duplicates`, an import run that finds
+any duplicate group lists every group (item IDs and titles), writes nothing
+and exits 1. With the flag, duplicates are resolved as below. `--dry-run`
+does everything except writing and prints the full summary, including the
+citekeys that would be dropped.
+
+- **Duplicate group:** items of one library with the same item type, the same
+  normalised title (case-folded, letters and digits only), and at least one
+  shared identifier: the same normalised DOI, the same bytes in any PDF
+  attachment, or the same URL. Grouping is transitive.
+- **Bootstrap URL tie:** when bootstrapping, an existing entry that matches
+  several items at the URL level, and whose tie the title cannot break, makes
+  those items one duplicate group too, whatever their types and titles.
+  (A generic URL shared by items whose titles do break the tie, such as a
+  project's deliverables page, groups nothing.)
+- **Survivor:** chosen by a pluggable rule `Callable[[Sequence[Item]], Item]`.
+  The rule used: the item with its own PDF on disk; among several, the oldest
+  `dateAdded`; ties broken by the smaller item ID.
+- **Merged item:** the survivor's item ID, type, fields and creators; the
+  survivor's own attachments, plus the other members' attachments only when
+  the survivor has no PDF of its own; the union of collection memberships and
+  tags. So the main PDF is the survivor's own whenever it has one.
+- **Report:** each non-survivor is reported as `duplicate <item ID> of <item
+  ID>`; it gets no entry and no citekey.
+- **Bootstrap, several entries for one item:** any item claimed by several
+  entries (a survivor merged here, or an item whose copies were already
+  merged in Zotero, which keeps each copy's entry in the existing
+  bibliography) freezes exactly one citekey: the entry whose own file
+  matches one of the item's own PDFs (for a survivor merged here, its PDFs
+  from before the merge); if none or several do, the one equal to the key
+  rule's stem for the item; else one without a clash suffix; else the
+  smallest. The others are **dropped**, retired in the citekey lock as
+  `dropped:<citekey>` and listed so drafts citing them can be updated.
+- **Bootstrap, ties that are not duplicates:** when an entry matches several
+  items at its first matching level, keep those whose normalised title equals
+  the entry's; exactly one left wins, otherwise the entry is ambiguous.
+- The grouping takes any `Item` records and any survivor rule, so a later
+  cross-manager version can reuse it; reading several libraries in one
+  import run stays open (below).
+
 ### CLI
 
 ```text
 chitragupta-importer zotero --data-dir <Zotero dir> --out <papers dir>
                             [--bootstrap <existing .bib>]
+                            [--merge-duplicates] [--dry-run]
 ```
 
 `--data-dir` holds `zotero.sqlite` and `storage/`. Exit 0 on success,

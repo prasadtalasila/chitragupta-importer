@@ -16,8 +16,8 @@ changes the path; same-named siblings stay distinct.
   renames and moves still break stored scopes and a move can merge two
   same-named siblings.
 - **`::` or `.` between names.** Every shell-safe separator already occurs in
-  the Zotero data's labels (`::` and `/` in tags, `.` in
-  `Industry 5.0`).
+  the Zotero data's labels (`::` and `/` in tags, `.` in collection names, e.g.
+  a version number).
 
 ## Consequences
 

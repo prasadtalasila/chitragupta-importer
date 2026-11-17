@@ -45,6 +45,20 @@ Run the test and lint commands above. Line and branch coverage stays at
 the same command there and compare counts. Report pre-existing failures;
 do not fix them in the same diff.
 
+For a change to the key rule (`citekeys.key_stem`) or to the BibTeX
+rendering (`bibtex.py`), also run the check against a real Zotero library
+and the bibliography Zotero exported from it, into an empty directory
+outside the repository:
+
+```bash
+uv run python scripts/check_zotero_data.py ~/Zotero old.bib /tmp/papers-check
+```
+
+It prints aggregate numbers only: the bootstrap counts, the key-rule match
+rate and, per field, how many frozen entries differ from the existing
+bibliography. Not run in CI, since the library is private; never commit
+its output.
+
 Claim something passes only after seeing it pass.
 
 ## Shipping

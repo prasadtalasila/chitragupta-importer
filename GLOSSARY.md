@@ -50,6 +50,18 @@ The one PDF attachment of an item that is imported: the one whose file name
 has the lowest hash.
 _Avoid_: primary PDF, full text
 
+**Duplicate group**:
+Items of one library that are the same work: same item type, same
+normalised title, and a shared DOI, URL or identical PDF bytes; or items an
+existing entry ties at the URL level that the title cannot separate.
+_Avoid_: duplicate set, clones
+
+**Survivor**:
+The one item of a duplicate group that is imported: the one with its own
+PDF, else the oldest; it carries the group's collection memberships and
+tags, and the others are reported as duplicates of it.
+_Avoid_: master, canonical item
+
 ## Import
 
 **Import run**:
@@ -130,7 +142,7 @@ collection.
 
 **Slug path**:
 The segment slugs of a collection and its ancestors, from the root, joined
-by `.`, such as `digital-twin.dt-platforms`.
+by `.`, such as `tide-pools.tp-gauges`.
 _Avoid_: collection path, group path
 
 **Collection lock**:
@@ -149,7 +161,7 @@ never written, always derived from slug paths.
 
 **Display path**:
 The names of a collection and its ancestors, from the root, joined by
-` / `, such as `Digital Twin / DT Platforms`; only shown or matched whole,
+` / `, such as `Tide Pools / TP Gauges`; only shown or matched whole,
 never split back into names.
 _Avoid_: collection path, full name
 
@@ -175,6 +187,12 @@ _Avoid_: deleted, stale
 The citekey of an item that still exists but is currently left out; it
 is kept, not reused, and returns when the item is included again.
 _Avoid_: suspended, inactive
+
+**Dropped citekey**:
+A citekey of the existing bibliography that bootstrap did not freeze because
+another entry for the same item (a survivor, or an item merged in Zotero) was
+frozen instead.
+_Avoid_: lost key, alias
 
 **Rename**:
 A collection keeping its collection ID and parent but changing its name;
