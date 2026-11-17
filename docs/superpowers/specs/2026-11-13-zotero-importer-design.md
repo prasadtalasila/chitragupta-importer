@@ -324,6 +324,42 @@ collection ids. `cg-` namespaces the field because `collection` already
 names BibTeX and biblatex entry types (`@incollection`, `@collection`)
 and CSL's series variables.
 
+### Duplicate items within a library
+
+Added 2026-11-17, after the first run on the Zotero data: 69 entries of the
+existing bibliography matched more than one item; 59 of them belong to 34
+groups of duplicate items, and 24 of those groups have two or three entries
+of their own (`kapteyn_toward_nodate`, `kapteyn_toward_nodate-1`). Decision
+record: `docs/adr/0008-merge-duplicate-items-in-code.md`.
+
+- **Duplicate group:** items of one library with the same item type, the same
+  normalised title (case-folded, letters and digits only), and at least one
+  shared strong identifier: the same normalised DOI or the same bytes in any
+  PDF attachment. Grouping is transitive.
+- **Survivor:** chosen by a pluggable rule `Callable[[Sequence[Item]], Item]`.
+  The Zotero rule is the master Zotero's merge dialog preselects: the oldest
+  `dateAdded`, ties broken by the smaller item ID. A later merge in Zotero
+  with the default master keeps the same item ID, so frozen citekeys stay.
+- **Merged item:** the survivor's item ID, type, fields and creators; its
+  attachments followed by the other members' attachments in item-ID order;
+  the union of collection memberships and tags. This mirrors what a Zotero
+  merge does. The rest of the import run sees only merged items.
+- **Report:** each non-survivor is reported as `duplicate <item ID> of <item
+  ID>`; it gets no entry and no citekey.
+- **Bootstrap, several entries for one merged item:** exactly one citekey is
+  frozen: the one equal to the key rule's stem for the survivor; else one
+  without a clash suffix; else the smallest. The others are **dropped**,
+  listed in the run summary so drafts citing them can be updated. This
+  applies only to merged items; two entries claiming one ordinary item are
+  still refused.
+- **Bootstrap, ties that are not duplicates:** when an entry matches several
+  items at its first matching level, keep those whose normalised title equals
+  the entry's; exactly one left wins, otherwise the entry is ambiguous and the
+  run is refused.
+- The grouping takes any `Item` records and any survivor rule, so a later
+  cross-manager version can reuse it; reading several libraries in one
+  import run stays open (below).
+
 ### CLI
 
 ```text

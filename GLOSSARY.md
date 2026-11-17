@@ -50,6 +50,17 @@ The one PDF attachment of an item that is imported: the one whose file name
 has the lowest hash.
 _Avoid_: primary PDF, full text
 
+**Duplicate group**:
+Items of one library that are the same work: same item type, same
+normalised title, and a shared DOI or identical PDF bytes.
+_Avoid_: duplicate set, clones
+
+**Survivor**:
+The one item of a duplicate group that is imported, carrying the group's
+attachments, collection memberships and tags; the others are reported as
+duplicates of it.
+_Avoid_: master, canonical item
+
 ## Import
 
 **Import run**:
@@ -175,6 +186,11 @@ _Avoid_: deleted, stale
 The citekey of an item that still exists but is currently left out; it
 is kept, not reused, and returns when the item is included again.
 _Avoid_: suspended, inactive
+
+**Dropped citekey**:
+A citekey of the existing bibliography that bootstrap did not freeze because
+another entry for the same survivor was frozen instead.
+_Avoid_: lost key, alias
 
 **Rename**:
 A collection keeping its collection ID and parent but changing its name;
