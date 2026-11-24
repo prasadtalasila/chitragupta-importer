@@ -221,3 +221,7 @@ __marimo__/
 
 # Local settings for scripts/rc-daemon.sh (copied from rc-daemon.env.example)
 scripts/rc-daemon.env
+
+# Local Zotero data and importer output (private)
+/zotero/
+/papers/
