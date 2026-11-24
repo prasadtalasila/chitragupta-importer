@@ -225,3 +225,4 @@ scripts/rc-daemon.env
 # Local Zotero data and importer output (private)
 /zotero/
 /papers/
+/config.toml

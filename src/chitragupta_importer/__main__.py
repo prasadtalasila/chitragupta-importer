@@ -8,6 +8,7 @@ from rich.text import Text
 
 from chitragupta_importer.bootstrap import BootstrapRefused
 from chitragupta_importer.citekeys import UnsafeCitekey
+from chitragupta_importer.config import load_config
 from chitragupta_importer.console import print_error, print_summary
 from chitragupta_importer.run import ImportRefused, WriteFailed, import_zotero
 from chitragupta_importer.sources.zotero import UnknownSchema, UnreadableLibrary
@@ -45,8 +46,17 @@ def main() -> None:
 
 
 @main.command("zotero", epilog=EXAMPLES)
-@click.option_panel("Locations", options=["--data-dir", "--out", "--bootstrap"])
+@click.option_panel("Locations", options=["--config", "--data-dir", "--out", "--bootstrap"])
 @click.option_panel("Behaviour", options=["--merge-duplicates", "--dry-run"])
+@click.option(
+    "--config",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    is_eager=True,
+    expose_value=False,
+    callback=load_config,
+    help="TOML file with data_dir and out, used when those options are left out;"
+    " config.toml in the working directory by default.",
+)
 @click.option(
     "--data-dir",
     required=True,

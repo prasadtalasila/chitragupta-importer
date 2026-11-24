@@ -33,6 +33,22 @@ Every later import run reads the locks in `papers/` and needs no
 chitragupta-importer zotero --data-dir ~/Zotero --out papers --merge-duplicates
 ```
 
+## Configuration
+
+Instead of repeating `--data-dir` and `--out`, put them in a `config.toml`
+in the directory you run the command from, or name another file with
+`--config`:
+
+```toml
+data_dir = "~/Zotero"
+out = "papers"
+```
+
+An option given on the command line overrides the file. A relative path in
+the file is taken from the file's own directory, and `~` is expanded. Any
+other key is an error. `config.toml` is listed in `.gitignore`, since it
+holds your own paths.
+
 `chitragupta-importer zotero --help`:
 
 ```text
@@ -44,6 +60,9 @@ chitragupta-importer zotero --data-dir ~/Zotero --out papers --merge-duplicates
  and exits 1.
 
 ╭─ Locations ──────────────────────────────────────────────────────────────────╮
+│    --config     FILE       TOML file with data_dir and out, used when those  │
+│                            options are left out; config.toml in the working  │
+│                            directory by default.                             │
 │ *  --data-dir   DIRECTORY  Zotero data directory, holding zotero.sqlite and  │
 │                            storage/; only read. Zotero shows it under Zotero │
 │                            Settings → Advanced → Files and Folders.          │
