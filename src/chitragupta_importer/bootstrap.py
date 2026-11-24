@@ -5,7 +5,8 @@ PDF content hash, DOI, URL and title; the first level with any match decides.
 Several matches at that level are narrowed to the items whose title equals
 the entry's, if there are any; more than one left is ambiguous. An item
 claimed by several entries (for example after a merge in Zotero) freezes one
-citekey; the others are dropped citekeys. An entry whose URL tie the title
+citekey; the others are dropped citekeys. The citekey of a matched item
+without a PDF is frozen too, as a dormant citekey. An entry whose URL tie the title
 cannot break names a duplicate group.
 """
 
@@ -29,13 +30,22 @@ _CLASH_SUFFIX = re.compile(r"-[0-9]+$")
 
 @dataclass(frozen=True)
 class BootstrapResult:
-    """The citekey lock from an existing bibliography; tuples hold sorted citekeys."""
+    """The citekey lock from an existing bibliography; tuples hold sorted citekeys.
+
+    The lock holds every frozen citekey; those of items without a PDF
+    (`not_included`) are dormant.
+    """
 
     lock: dict[str, str]
     unmatched: tuple[str, ...]
     ambiguous: tuple[str, ...]
     not_included: tuple[str, ...]
     dropped: tuple[str, ...] = ()
+
+    @property
+    def matched(self) -> int:
+        """How many frozen citekeys belong to included items."""
+        return len(self.lock) - len(self.not_included)
 
 
 class BootstrapRefused(Exception):
@@ -174,17 +184,9 @@ def url_tie_groups(existing: Path, library: Library) -> list[frozenset[str]]:
     return sorted((found for found in ties if len(found) > 1), key=sorted)
 
 
-def _split_frozen(
-    frozen: Mapping[str, str], items: Mapping[str, Item]
-) -> tuple[dict[str, str], list[str]]:
-    """The frozen citekeys of included items (the lock), and those of left-out items."""
-    lock, not_included = {}, []
-    for item_id, citekey in frozen.items():
-        if isinstance(main_pdf(items[item_id]), LeftOutReason):
-            not_included.append(citekey)
-        else:
-            lock[item_id] = citekey
-    return lock, not_included
+def _not_included(frozen: Mapping[str, str], items: Mapping[str, Item]) -> list[str]:
+    """The frozen citekeys of items left out of the import run, which stay dormant."""
+    return [c for i, c in frozen.items() if isinstance(main_pdf(items[i]), LeftOutReason)]
 
 
 def bootstrap(
@@ -212,9 +214,9 @@ def bootstrap(
     problems = list(_refusals(matches, frozen))
     if problems:
         raise BootstrapRefused("bootstrap refused:\n" + "\n".join(problems))
-    lock, not_included = _split_frozen(frozen, items)
     unmatched = tuple(sorted(m.citekey for m in matches if not m.found))
     dropped = tuple(
         sorted(m.citekey for i, ms in claims.items() for m in ms if m.citekey != frozen[i])
     )
-    return BootstrapResult(lock, unmatched, (), tuple(sorted(not_included)), dropped)
+    not_included = tuple(sorted(_not_included(frozen, items)))
+    return BootstrapResult(frozen, unmatched, (), not_included, dropped)

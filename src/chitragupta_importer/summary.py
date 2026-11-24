@@ -47,7 +47,7 @@ def format_summary(summary: RunSummary) -> str:
 def _bootstrap_lines(result: BootstrapResult) -> list[str]:
     """The bootstrap counts, then one line per dropped citekey."""
     counts = (
-        f"bootstrap: matched {len(result.lock)}, unmatched {len(result.unmatched)}, "
+        f"bootstrap: matched {result.matched}, unmatched {len(result.unmatched)}, "
         f"ambiguous {len(result.ambiguous)}, not included {len(result.not_included)}, "
         f"dropped {len(result.dropped)}"
     )

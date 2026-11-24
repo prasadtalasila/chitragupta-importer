@@ -23,7 +23,7 @@ def _counts(summary: RunSummary) -> Table:
     table.add_row("duplicates", str(len(summary.duplicates)))
     result = summary.bootstrap
     if result is not None:
-        table.add_row("bootstrap: matched", str(len(result.lock)))
+        table.add_row("bootstrap: matched", str(result.matched))
         table.add_row("bootstrap: unmatched", str(len(result.unmatched)))
         table.add_row("bootstrap: ambiguous", str(len(result.ambiguous)))
         table.add_row("bootstrap: not included", str(len(result.not_included)))

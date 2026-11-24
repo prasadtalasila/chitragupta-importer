@@ -109,13 +109,15 @@ later merge in Zotero that keeps the same item keeps the frozen citekey.
 
 A bootstrap freezes citekeys only. It never copies a field from the old
 bibliography: the new `bibliography.bib` is written from Zotero's current
-data. Entries of the old bibliography that do not become a frozen citekey
-are counted, not frozen:
+data. Entries of the old bibliography that do not become an included entry
+are counted:
 
 - *unmatched*: no item matched by PDF, DOI, URL or title. Nothing is frozen
   for the entry.
 - *not included*: the entry's item has no PDF (see the left-out counts), so
-  it gets no entry in the new bibliography and nothing is frozen.
+  it gets no entry in the new bibliography. Its citekey is frozen as a
+  dormant citekey: no other item can take it, and the item gets it back
+  once it has a PDF.
 - *dropped*: another entry for the same item was frozen (see above).
 
 Fields can differ between the two bibliographies for these reasons: notes

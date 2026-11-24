@@ -193,9 +193,10 @@ those matches before assigning anything new.
 - Match by content hash of the entry's PDF against `storage/` first
   (497 of 498 match in the Zotero data), then DOI, then URL, then
   normalised title.
-- Only matched entries whose item has a valid PDF get a lock line.
-  The rest (146 in the Zotero data) get none and are not included;
-  an item that gains a PDF later gets a new key from the rule.
+- Every matched entry gets a lock line. An entry whose item has no
+  valid PDF (146 in the Zotero data) is not included and its key is
+  dormant, so no other item takes it and the item gets it back when it
+  gains a PDF.
 - An entry matching no item, or more than one, is listed and gets no
   lock line. An item claimed by several entries freezes one citekey and
   drops the others (see Duplicate items within a library).
