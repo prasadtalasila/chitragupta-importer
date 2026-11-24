@@ -4,7 +4,8 @@ import pytest
 from run_fixture import NEWER, OLDER, OSTRANDER, SMITH, build, snapshot
 
 from chitragupta_importer.renames import parse_renames_lock
-from chitragupta_importer.run import ImportRefused, import_zotero
+from chitragupta_importer import run
+from chitragupta_importer.run import ImportRefused, WriteFailed, import_zotero
 
 # A frozen citekey longer than 30 characters, and the key the key rule gives its item.
 LONG = "ostrander_calibrating_the_digital_twin_2024"
@@ -86,3 +87,19 @@ def test_malformed_renames_lock_refuses(tmp_path):
     (out / "renames.lock").write_text("x y\n", encoding="utf-8")
     with pytest.raises(ImportRefused, match="renames.lock: malformed lock file"):
         import_zotero(build(tmp_path, OSTRANDER), out)
+
+
+def test_renames_lock_is_written_before_the_citekey_lock(tmp_path, monkeypatch):
+    out = tmp_path / "out"
+    bib = existing(tmp_path, f"{LONG}-1", LONG)
+    write = run.atomic_write
+
+    def failing_write(path, text):
+        if path.name == "citekeys.lock":
+            raise OSError(28, "No space left on device", str(path))
+        write(path, text)
+
+    monkeypatch.setattr(run, "atomic_write", failing_write)
+    with pytest.raises(WriteFailed):
+        import_zotero(build(tmp_path, NEWER, OLDER), out, bib, merge_duplicates=True)
+    assert parse_renames_lock(read(out, "renames.lock")) == {f"{LONG}-1": LONG, LONG: SHORT}

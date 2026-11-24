@@ -143,13 +143,17 @@ def pdf_destination(out_dir: Path, name: str) -> Path:
 
 
 def _write(out_dir: Path, plan: Plan) -> None:
-    """Write PDFs, the bibliography, the citekey lock and, last, the collection lock."""
+    """Write PDFs, the rename lock, the bibliography, the citekey lock, then the collection lock.
+
+    The rename lock goes first: a row ahead of its citekey lock is harmless,
+    but one lost after it is never found again.
+    """
     for dest, src in sorted(plan.pdfs.items()):
         copy_pdf(src, dest)
-    atomic_write(out_dir / BIBLIOGRAPHY, plan.bibliography)
-    atomic_write(out_dir / CITEKEY_LOCK, format_citekey_lock(plan.citekey_lock))
     if plan.renames_lock:
         atomic_write(out_dir / RENAMES_LOCK, format_renames_lock(plan.renames_lock))
+    atomic_write(out_dir / BIBLIOGRAPHY, plan.bibliography)
+    atomic_write(out_dir / CITEKEY_LOCK, format_citekey_lock(plan.citekey_lock))
     atomic_write(out_dir / COLLECTION_LOCK, format_collection_lock(plan.collection_lock))
 
 
