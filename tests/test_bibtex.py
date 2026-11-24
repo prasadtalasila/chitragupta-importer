@@ -226,6 +226,10 @@ def test_empty_name_table():
 def test_bibliography_is_name_table_then_entries_blank_line_separated():
     table = render_name_table([("a", "A")])
     first, second = render_entry("x", item(), []), render_entry("y", item(), [])
-    assert render_bibliography(table, [first, second]) == f"{table}\n{first}\n{second}"
-    assert render_bibliography("", [first]) == first
-    assert render_bibliography("", []) == ""
+    assert render_bibliography([table], [first, second]) == f"{table}\n{first}\n{second}"
+    assert render_bibliography([""], [first]) == first
+    assert render_bibliography(["", ""], []) == ""
+
+
+def test_header_blocks_in_order():
+    assert render_bibliography(["T\n", "R\n"], ["E\n"]) == "T\n\nR\n\nE\n"

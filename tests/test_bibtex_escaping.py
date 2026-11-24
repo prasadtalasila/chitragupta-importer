@@ -84,7 +84,7 @@ def test_specials_round_trip():
         render_entry("b", item("conferencePaper", title="T", proceedingsTitle="P {Q"), []),
     ]
     table = render_name_table([("paired", "Paired {X}"), ("lone", "Lone { brace } }")])
-    text = render_bibliography(table, entries)
+    text = render_bibliography([table], entries)
     database = bibtexparser.loads(text, BibTexParser(common_strings=True))
     assert [e["ID"] for e in database.entries] == ["a", "b"]
     assert unescape(database.entries[0]["title"]) == title
@@ -114,7 +114,7 @@ def test_unpaired_braces_in_url_and_doi_percent_encoded():
         render_entry("b", item(url="http://x.example/{c}%20#d_e", DOI="10.9999/{y}"), []),
         render_entry("c", item(title="After"), []),
     ]
-    database = bibtexparser.loads(render_bibliography("", entries), BibTexParser())
+    database = bibtexparser.loads(render_bibliography([], entries), BibTexParser())
     assert [e["ID"] for e in database.entries] == ["a", "b", "c"]
     a, b = database.entries[0], database.entries[1]
     assert (a["url"], a["doi"]) == ("http://x.example/a%7Db", "10.9999/x%7B")

@@ -100,7 +100,7 @@ def _render(
         item_paths = sorted(paths[c] for c in item.collection_ids if c in paths)
         entries.append(render_entry(citekeys[item_id], item, item_paths))
     name_table = render_name_table(name_table_rows(records, used))
-    return render_bibliography(name_table, entries)
+    return render_bibliography([name_table], entries)
 
 
 def _check_citekeys(included: Mapping[str, tuple[Item, Path]], lock: Mapping[str, str]) -> None:
