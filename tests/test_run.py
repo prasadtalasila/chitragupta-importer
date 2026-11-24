@@ -92,6 +92,21 @@ def test_retired_key_not_reused(tmp_path):
     assert "zotero:user/CCCC3333\tsmith_digital_2020-1\n" in lock
 
 
+def test_bootstrap_key_of_item_without_pdf_is_dormant_not_reused(tmp_path):
+    out = tmp_path / "out"
+    smith_no_pdf = {**SMITH, "pdfs": [("smith.pdf", None)]}
+    same_stem = {**SMITH, "key": "CCCC3333", "fields": {"title": "Digital Twins", "date": "2020"}}
+    existing = tmp_path / "references.bib"
+    existing.write_text("@article{smith_digital_2020,\n  title = {Digital platforms},\n}\n")
+    data_dir = build(tmp_path / "v1", smith_no_pdf, same_stem)
+    summary = import_zotero(data_dir, out, bootstrap_from=existing)
+    assert summary.new_citekeys == ("smith_digital_2020-1",)
+    assert "zotero:user/BBBB2222\tsmith_digital_2020\n" in (out / "citekeys.lock").read_text()
+    summary = import_zotero(build(tmp_path / "v2", SMITH, same_stem), out)
+    assert "@article{smith_digital_2020," in (out / "bibliography.bib").read_text()
+    assert summary.new_citekeys == ()
+
+
 def test_bootstrap_freezes_existing_keys(tmp_path):
     out = tmp_path / "out"
     data_dir = build(tmp_path, OSTRANDER, SMITH)
@@ -128,7 +143,7 @@ def test_format_summary_lists_every_line_in_order():
         collection_changes=("new x", "retired y"),
         unreferenced=("old.pdf", "stray.pdf"),
         skipped_libraries=("zotero:group-7",),
-        bootstrap=BootstrapResult({"i": "k"}, ("u1", "u2"), (), ("n1",), ("k-1", "k-2")),
+        bootstrap=BootstrapResult({"i": "k", "j": "n1"}, ("u1", "u2"), (), ("n1",), ("k-1", "k-2")),
         duplicates={"zotero:user/E": "zotero:user/D", "zotero:user/C2": "zotero:user/D"},
     )
     assert format_summary(summary) == (

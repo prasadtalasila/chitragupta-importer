@@ -138,11 +138,12 @@ def test_item_claimed_by_two_entries_smallest_frozen(tmp_path):
     assert result.dropped == ("k2",)
 
 
-def test_matched_item_without_pdf_gets_no_lock_line(tmp_path):
+def test_matched_item_without_pdf_keeps_a_dormant_lock_line(tmp_path):
     library = library_of(tmp_path, ("AAAA1111", {"title": "Toward a Twin"}, [("gone.pdf", None)]))
     bib = existing_bib(tmp_path, entry("abernathy_toward_nodate", title="Toward a twin"))
     result = bootstrap(bib, library)
-    assert result.not_included == ("abernathy_toward_nodate",) and not result.lock
+    assert result.lock == {"zotero:user/AAAA1111": "abernathy_toward_nodate"}
+    assert result.not_included == ("abernathy_toward_nodate",) and result.matched == 0
     assert not result.unmatched
 
 

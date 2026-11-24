@@ -86,7 +86,7 @@ def main(data_dir: Path, existing_bib: Path, merge: bool) -> None:
             sys.exit(f"import run refused: {error}")
     result = summary.bootstrap
     print(
-        f"bootstrap: matched {len(result.lock)}, unmatched {len(result.unmatched)}, "
+        f"bootstrap: matched {result.matched}, unmatched {len(result.unmatched)}, "
         f"ambiguous {len(result.ambiguous)}, not included {len(result.not_included)}, "
         f"dropped {len(result.dropped)}"
     )
@@ -95,10 +95,12 @@ def main(data_dir: Path, existing_bib: Path, merge: bool) -> None:
     print(f"included {summary.included}, new citekeys {len(summary.new_citekeys)}")
     left_out = ", ".join(f"{reason} {len(ids)}" for reason, ids in summary.left_out.items())
     print(f"left out: {left_out or 'none'}")
-    matches = key_rule_matches(data_dir, result.lock)
-    total = len(result.lock)
+    dormant = set(result.not_included)
+    lock = {item_id: key for item_id, key in result.lock.items() if key not in dormant}
+    matches = key_rule_matches(data_dir, lock)
+    total = len(lock)
     print(f"key rule: {matches} of {total} frozen citekeys ({100 * matches / total:.1f}%)")
-    frozen = sorted(result.lock.values())
+    frozen = sorted(lock.values())
     differing = field_differences(_entries(existing_bib), _entries(plan.bibliography), frozen)
     print(f"field differences over {len(frozen)} frozen entries:")
     for name, count in sorted(differing.items(), key=lambda pair: (-pair[1], pair[0])):

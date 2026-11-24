@@ -1,9 +1,10 @@
 # Include only items with a valid PDF, one main PDF each
 
 An item is included only if it has a PDF attachment that exists on disk;
-every other item is left out and listed with its reason, and gets no lock
-line (bootstrap reserves no key for it; if it gains a PDF later it gets a
-new key). chitragupta can only cite a paper it has parsed from a PDF, so a
+every other item is left out and listed with its reason, and gets no entry.
+A citekey bootstrap froze for such an item stays in the lock as a dormant
+citekey, so no other item can take a spelling drafts already cite, and the
+item gets that key back when it gains a PDF. chitragupta can only cite a paper it has parsed from a PDF, so a
 PDF-less item adds nothing to the corpus. An item with several PDFs (19 in
 the Zotero data) imports exactly one, its main PDF: the one whose file name has the
 lowest SHA-256 hash, ties broken by full path: deterministic, independent of
