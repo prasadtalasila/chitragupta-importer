@@ -26,6 +26,14 @@ from chitragupta_importer.inputs import (
 )
 from chitragupta_importer.model import Item, Library
 from chitragupta_importer.pdfs import LeftOutReason, main_pdf
+from chitragupta_importer.renames import (
+    RenameSources,
+    block_rows,
+    format_renames_lock,
+    parse_renames_lock,
+    plan_renames,
+    render_renames_block,
+)
 from chitragupta_importer.slugs import (
     CollectionRecord,
     format_collection_lock,
@@ -40,6 +48,7 @@ from chitragupta_importer.write import atomic_write, copy_pdf, unreferenced_file
 BIBLIOGRAPHY = "bibliography.bib"
 CITEKEY_LOCK = "citekeys.lock"
 COLLECTION_LOCK = "collections.lock"
+RENAMES_LOCK = "renames.lock"
 FILES = "files"
 
 __all__ = [
@@ -70,6 +79,7 @@ class Plan:
     bibliography: str
     citekey_lock: dict[str, str]
     collection_lock: dict[str, CollectionRecord]
+    renames_lock: dict[str, str]
 
 
 def _split(library: Library) -> tuple[dict[str, tuple[Item, Path]], dict[str, tuple[str, ...]]]:
@@ -91,8 +101,9 @@ def _render(
     citekeys: Mapping[str, str],
     records: Mapping[str, CollectionRecord],
     used: set[str],
+    renames: Mapping[str, str],
 ) -> str:
-    """The bibliography: the name table, then one entry per included item by citekey."""
+    """The bibliography: the name table, the renames, then the entries by citekey."""
     paths = slug_paths(records)
     entries = []
     for item_id in sorted(included, key=lambda key: citekeys[key]):
@@ -100,7 +111,8 @@ def _render(
         item_paths = sorted(paths[c] for c in item.collection_ids if c in paths)
         entries.append(render_entry(citekeys[item_id], item, item_paths))
     name_table = render_name_table(name_table_rows(records, used))
-    return render_bibliography([name_table], entries)
+    rows = block_rows(renames, {citekeys[item_id] for item_id in included})
+    return render_bibliography([name_table, render_renames_block(rows)], entries)
 
 
 def _check_citekeys(included: Mapping[str, tuple[Item, Path]], lock: Mapping[str, str]) -> None:
@@ -138,28 +150,34 @@ def _write(out_dir: Path, plan: Plan) -> None:
         copy_pdf(src, dest)
     atomic_write(out_dir / BIBLIOGRAPHY, plan.bibliography)
     atomic_write(out_dir / CITEKEY_LOCK, format_citekey_lock(plan.citekey_lock))
+    if plan.renames_lock:
+        atomic_write(out_dir / RENAMES_LOCK, format_renames_lock(plan.renames_lock))
     atomic_write(out_dir / COLLECTION_LOCK, format_collection_lock(plan.collection_lock))
 
 
-def _plan(out_dir: Path, library: Library, lock: dict[str, str]) -> tuple[Plan, RunSummary]:
-    """The plan and summary for the merged `library`, starting from the citekey `lock`."""
-    included, left_out = _split(library)
+def _plan(out_dir: Path, lock: dict[str, str], sources: RenameSources) -> tuple[Plan, RunSummary]:
+    """The plan and summary for the merged library, starting from the citekey `lock`."""
+    included, left_out = _split(sources.library)
     _check_readable(included)
     collection_lock = read_lock(out_dir / COLLECTION_LOCK, parse_collection_lock)
-    lock, new_ids = assign_citekeys({i: key_stem(item) for i, (item, _) in included.items()}, lock)
+    renames = read_lock(out_dir / RENAMES_LOCK, parse_renames_lock)
+    stems = {i: key_stem(item) for i, (item, _) in included.items()}
+    lock, new_ids = assign_citekeys(stems, lock)
+    lock, renames, added = plan_renames(renames, lock, stems, sources)
     _check_citekeys(included, lock)
     used = {c for item, _ in included.values() for c in item.collection_ids}
-    records, changes = update_collections(collection_lock, library.collections, used)
+    records, changes = update_collections(collection_lock, sources.library.collections, used)
     pdfs = {pdf_destination(out_dir, f"{lock[i]}.pdf"): pdf for i, (_, pdf) in included.items()}
-    plan = Plan(pdfs, _render(included, lock, records, used), lock, records)
+    plan = Plan(pdfs, _render(included, lock, records, used, renames), lock, records, renames)
     return plan, RunSummary(
         included=len(included),
         left_out=left_out,
         new_citekeys=tuple(lock[item_id] for item_id in new_ids),
         collection_changes=tuple(changes),
         unreferenced=tuple(unreferenced_files(out_dir / FILES, {p.name for p in pdfs})),
-        skipped_libraries=library.skipped_libraries,
+        skipped_libraries=sources.library.skipped_libraries,
         bootstrap=None,
+        renames=tuple(added),
     )
 
 
@@ -175,7 +193,8 @@ def plan_import(
     check_bootstrap(out_dir / CITEKEY_LOCK, bootstrap_from)
     library, duplicates, survivor_pdfs = merged_library(data_dir, bootstrap_from, merge)
     lock, bootstrapped = seed_lock(out_dir / CITEKEY_LOCK, library, bootstrap_from, survivor_pdfs)
-    plan, summary = _plan(out_dir, library, lock)
+    successors = {} if bootstrapped is None else bootstrapped.successors
+    plan, summary = _plan(out_dir, lock, RenameSources(library, duplicates, successors))
     return plan, replace(summary, bootstrap=bootstrapped, duplicates=duplicates)
 
 

@@ -6,8 +6,9 @@ bibliography's `cg-renames v1` block tells chitragupta which ones apply.
 """
 
 from collections.abc import Iterable, Mapping, Sequence, Set
+from dataclasses import dataclass, field
 
-from chitragupta_importer.citekeys import citekey_problem
+from chitragupta_importer.citekeys import citekey_problem, shorten_long_citekeys
 from chitragupta_importer.model import Library
 
 
@@ -104,3 +105,38 @@ def zotero_merge_renames(library: Library, lock: Mapping[str, str]) -> list[tupl
         for gone in item.replaces
         if gone in lock and gone not in live and item.item_id in lock
     ]
+
+
+@dataclass(frozen=True)
+class RenameSources:
+    """What an import run knows about retired citekeys.
+
+    `duplicates` maps each item merged here to its survivor; `successors`
+    maps each citekey a bootstrap dropped to the one frozen for its item.
+    """
+
+    library: Library
+    duplicates: Mapping[str, str] = field(default_factory=dict)
+    successors: Mapping[str, str] = field(default_factory=dict)
+
+
+def plan_renames(
+    renames: Mapping[str, str],
+    lock: Mapping[str, str],
+    stems: Mapping[str, str],
+    sources: RenameSources,
+) -> tuple[dict[str, str], dict[str, str], list[tuple[str, str]]]:
+    """The citekey lock, the rename lock and the renames this run adds.
+
+    Renames come from a bootstrap's dropped citekeys, merges here and in
+    Zotero, then citekeys too long to keep; `stems` holds the key-rule stems
+    of the included items.
+    """
+    found = [
+        *sorted(sources.successors.items()),
+        *merge_renames(sources.duplicates, lock),
+        *zotero_merge_renames(sources.library, lock),
+    ]
+    lock, shortened = shorten_long_citekeys(stems, lock)
+    renames, added = add_renames(renames, [*found, *shortened])
+    return lock, renames, added

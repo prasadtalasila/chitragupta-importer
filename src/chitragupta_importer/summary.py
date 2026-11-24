@@ -11,7 +11,8 @@ class RunSummary:  # pylint: disable=too-many-instance-attributes
     """What an import run did, or with `dry_run` would have done.
 
     `left_out` maps a reason to sorted item IDs; `duplicates` maps each
-    non-survivor's item ID to its survivor's.
+    non-survivor's item ID to its survivor's; `renames` holds the
+    `(old, successor)` citekey renames this run added.
     """
 
     included: int
@@ -23,6 +24,7 @@ class RunSummary:  # pylint: disable=too-many-instance-attributes
     bootstrap: BootstrapResult | None
     duplicates: Mapping[str, str] = field(default_factory=dict)
     dry_run: bool = False
+    renames: tuple[tuple[str, str], ...] = ()
 
 
 def format_summary(summary: RunSummary) -> str:
@@ -41,6 +43,7 @@ def format_summary(summary: RunSummary) -> str:
         lines.append("skipped libraries: " + ", ".join(summary.skipped_libraries))
     if summary.bootstrap is not None:
         lines += _bootstrap_lines(summary.bootstrap)
+    lines += [f"renamed citekey: {old} -> {new}" for old, new in summary.renames]
     return "".join(f"{line}\n" for line in lines)
 
 

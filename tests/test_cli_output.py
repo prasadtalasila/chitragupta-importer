@@ -65,11 +65,13 @@ def test_summary_table(tmp_path):
     assert row(output, "new citekeys", 1)
     assert row(output, "duplicates", 1)
     assert row(output, "dropped citekeys", 1)
+    assert row(output, "citekey renames", 1)
     assert row(output, "unreferenced files", 0)
     lines = output.splitlines()
     assert "new tide-pools" in lines
     assert "duplicate zotero:user/BBBB2222 of zotero:user/AAAA1111" in lines
     assert "dropped citekey: ostrander_calibrating_2024-1" in lines
+    assert "renamed citekey: ostrander_calibrating_2024-1 -> ostrander_calibrating_2024" in lines
 
 
 def test_dry_run_and_skipped_library_lines(tmp_path):
