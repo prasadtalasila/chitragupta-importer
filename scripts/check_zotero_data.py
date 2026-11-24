@@ -51,11 +51,14 @@ def _value(name: str, value: str):
     return " ".join(value.split())
 
 
-def field_differences(existing: dict, written: dict, citekeys) -> Counter:
-    """Per field name, the number of citekeys whose two entries differ in that field."""
+def field_differences(existing: dict, written: dict, pairs) -> Counter:
+    """Per field name, how many `(frozen, written)` citekey pairs' entries differ in it.
+
+    The written citekey differs from the frozen one when the frozen one was renamed.
+    """
     differing: Counter = Counter()
-    for citekey in citekeys:
-        old, new = existing[citekey], written[citekey]
+    for frozen, current in pairs:
+        old, new = existing[frozen], written[current]
         for name in sorted((set(old) | set(new)) - IGNORED):
             if _value(name, old.get(name, "")) != _value(name, new.get(name, "")):
                 differing[name] += 1
@@ -102,9 +105,9 @@ def main(data_dir: Path, existing_bib: Path, merge: bool) -> None:
     matches = key_rule_matches(data_dir, lock)
     total = len(lock)
     print(f"key rule: {matches} of {total} frozen citekeys ({100 * matches / total:.1f}%)")
-    frozen = sorted(lock.values())
-    differing = field_differences(_entries(existing_bib), _entries(plan.bibliography), frozen)
-    print(f"field differences over {len(frozen)} frozen entries:")
+    pairs = sorted((key, plan.citekey_lock[item_id]) for item_id, key in lock.items())
+    differing = field_differences(_entries(existing_bib), _entries(plan.bibliography), pairs)
+    print(f"field differences over {len(pairs)} frozen entries:")
     for name, count in sorted(differing.items(), key=lambda pair: (-pair[1], pair[0])):
         print(f"  {name:<12} {count}")
 
