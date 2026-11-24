@@ -12,6 +12,7 @@ import shutil
 import sqlite3
 import tempfile
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
 
 from chitragupta_importer.model import Attachment, Collection, Creator, Item, Library
@@ -47,6 +48,11 @@ _ATTACHMENTS = """
     FROM itemAttachments a JOIN items i USING (itemID)
     WHERE a.parentItemID IS NOT NULL AND a.itemID NOT IN (SELECT itemID FROM deletedItems)
     ORDER BY a.parentItemID, i.key"""
+_REPLACES = """
+    SELECT r.itemID, r.object FROM itemRelations r JOIN relationPredicates p USING (predicateID)
+    WHERE p.predicate = 'dc:replaces'"""
+# The URI of a personal-library item, as Zotero records the item a merge replaced.
+_USER_ITEM_URI = re.compile(r"^http://zotero\.org/users/(?:local/)?\w+/items/([A-Z0-9]{8})$")
 _LIVE_COLLECTIONS = "c.collectionID NOT IN (SELECT collectionID FROM deletedCollections)"
 _COLLECTIONS = f"""
     SELECT c.key, p.key, c.collectionName
@@ -148,6 +154,7 @@ def _items(conn: sqlite3.Connection, data_dir: Path, library_id: int) -> tuple[I
     tags = _by_item(conn, _TAGS)
     attachments = _by_item(conn, _ATTACHMENTS)
     memberships = _by_item(conn, _MEMBERSHIPS)
+    replaces = _by_item(conn, _REPLACES)
     items = [
         Item(
             item_id=_user_id(key),
@@ -158,6 +165,7 @@ def _items(conn: sqlite3.Connection, data_dir: Path, library_id: int) -> tuple[I
             collection_ids=tuple(sorted(_user_id(key) for (key,) in memberships[item_id])),
             tags=tuple(sorted((name for (name,) in tags[item_id]), key=_tag_order)),
             date_added=date_added or "",
+            replaces=_replaced_ids(uri for (uri,) in replaces[item_id]),
         )
         for item_id, key, item_type, date_added in conn.execute(_ITEMS, (library_id, *_NOT_ITEMS))
     ]
@@ -178,6 +186,12 @@ def _by_item(conn: sqlite3.Connection, query: str) -> defaultdict[int, list[tupl
     for item_id, *rest in conn.execute(query):
         grouped[item_id].append(tuple(rest))
     return grouped
+
+
+def _replaced_ids(uris: Iterable[str]) -> tuple[str, ...]:
+    """The sorted item IDs of the personal-library items named by `dc:replaces` URIs."""
+    found = (_USER_ITEM_URI.match(uri) for uri in uris)
+    return tuple(sorted(_user_id(match.group(1)) for match in found if match))
 
 
 def _user_id(key: str) -> str:

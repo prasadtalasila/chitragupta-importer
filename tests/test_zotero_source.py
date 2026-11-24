@@ -225,3 +225,21 @@ def test_reader_reads_date_added(tmp_path):
     fx.add_item("ITEMBBBB")
     lib = read_library(fx.build())
     assert [item.date_added for item in lib.items] == ["2019-05-06 07:08:09", "2020-01-01 00:00:00"]
+
+
+def _replaces_of(tmp_path, uris):
+    fx = ZoteroFixture(tmp_path)
+    fx.add_item("ITEMAAAA", fields={"title": "A Twin"}, replaces=uris)
+    return read_library(fx.build()).items[0].replaces
+
+
+def test_item_lists_the_items_it_replaced(tmp_path):
+    uris = [
+        "http://zotero.org/users/local/abCD1234/items/OLD00002",
+        "http://zotero.org/users/12345/items/OLD00001",
+    ]
+    assert _replaces_of(tmp_path, uris) == ("zotero:user/OLD00001", "zotero:user/OLD00002")
+
+
+def test_replaced_group_item_or_odd_uri_is_ignored(tmp_path):
+    assert _replaces_of(tmp_path, ["http://zotero.org/groups/7/items/GRP00001", "urn:x"]) == ()
