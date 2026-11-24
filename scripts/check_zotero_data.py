@@ -28,7 +28,7 @@ from pathlib import Path
 from bibtexparser.bparser import BibTexParser
 
 from chitragupta_importer.bootstrap import BootstrapRefused
-from chitragupta_importer.citekeys import UnsafeCitekey, key_stem
+from chitragupta_importer.citekeys import UnsafeCitekey, export_stem
 from chitragupta_importer.run import DuplicatesFound, ImportRefused, plan_import
 from chitragupta_importer.sources.zotero import UnknownSchema, UnreadableLibrary, read_library
 
@@ -65,7 +65,7 @@ def key_rule_matches(data_dir: Path, lock: dict[str, str]) -> int:
     """The number of frozen citekeys the key rule reproduces, clash suffix stripped."""
     items = {item.item_id: item for item in read_library(data_dir).items}
     return sum(
-        key_stem(items[item_id]) == _CLASH_SUFFIX.sub("", citekey)
+        export_stem(items[item_id]) == _CLASH_SUFFIX.sub("", citekey)
         for item_id, citekey in lock.items()
     )
 

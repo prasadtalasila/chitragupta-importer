@@ -147,6 +147,18 @@ def test_matched_item_without_pdf_keeps_a_dormant_lock_line(tmp_path):
     assert not result.unmatched
 
 
+def test_claimant_tie_compares_against_the_unshortened_export_stem(tmp_path):
+    library = library_of(tmp_path, ("AAAA1111", {"title": "Calibrating Twins"}, [("a.pdf", PDF)]))
+    bib = existing_bib(
+        tmp_path,
+        entry("aaa", title="Calibrating twins")
+        + entry("noauthor_calibrating_nodate", title="Calibrating twins"),
+    )
+    result = bootstrap(bib, library)
+    assert result.lock == {"zotero:user/AAAA1111": "noauthor_calibrating_nodate"}
+    assert result.dropped == ("aaa",)
+
+
 def test_unsafe_frozen_key_refuses(tmp_path):
     library = library_of(tmp_path, ("AAAA1111", {"title": "Twin"}, [("a.pdf", PDF)]))
     bib = existing_bib(tmp_path, entry("a:b", title="Twin"))

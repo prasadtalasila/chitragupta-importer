@@ -117,8 +117,9 @@ different item.
 _Avoid_: stable key, pinned key
 
 **Key rule**:
-The pattern a new citekey is built from, `<author>_<titleword>_<year>`,
-with a clash suffix assigned once.
+The pattern a new citekey is built from, `<author>_<titleword>_<year>`
+shortened to at most 20 characters (the author part to at most 10), with a
+clash suffix assigned once.
 
 **Citekey lock**:
 The importer's permanent record of every citekey it has assigned, by item

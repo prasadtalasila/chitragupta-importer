@@ -186,6 +186,14 @@ builder pins the exact normalisation by making the rule reproduce the
 frozen keys of the Zotero data (ignoring `-N` suffixes) and reports
 the match rate; it should be close to 100%.
 
+A new key is that export stem shortened to at most 20 characters before
+any clash suffix: the creator part to at most 10 and the title word to
+what is left, each cut after a whole word when one fits, mid-word
+otherwise. Over the Zotero data this changes 347 of 639 stems and raises
+clash suffixes from 25 to 29. Bootstrap and the match rate compare
+against the unshortened export stem, since the frozen keys have that
+shape. (The owner's call, 2026-11-24.)
+
 **Bootstrap** (first run, no lock yet, `--bootstrap <bib>`): match each
 entry of the existing bibliography to a Zotero item, then write the lock from
 those matches before assigning anything new.

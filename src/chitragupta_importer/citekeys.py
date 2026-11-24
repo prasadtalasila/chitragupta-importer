@@ -22,6 +22,9 @@ _DROPPED_FROM_TITLE = re.compile(
 )
 _YEAR = re.compile(r"[0-9]{4}")
 _OUTSIDE_KEY_ALPHABET = re.compile(r"[^a-z0-9_-]")
+# The longest stem of a new citekey, before any clash suffix, and of its creator part.
+MAX_STEM_LENGTH = 20
+MAX_CREATOR_LENGTH = 10
 # The pseudo item ID prefix under which a dropped citekey is reserved in the lock.
 DROPPED_PREFIX = "dropped:"
 
@@ -70,9 +73,34 @@ def _year_part(item: Item) -> str:
     return year.group() if year else "nodate"
 
 
-def key_stem(item: Item) -> str:
-    """Return `<creator>_<titleword>_<year>`, the stem of the item's proposed citekey."""
+def export_stem(item: Item) -> str:
+    """Return `<creator>_<titleword>_<year>`, the stem Zotero's built-in exporter gives."""
     return f"{_creator_part(item)}_{_title_part(item)}_{_year_part(item)}"
+
+
+def _shorten(part: str, limit: int, separator: str) -> str:
+    """`part`, else its longest prefix of whole `separator`-joined words within `limit`.
+
+    A first word longer than `limit` is cut to `limit` characters.
+    """
+    if len(part) <= limit:
+        return part
+    words = part.split(separator)
+    prefixes = (separator.join(words[:n]) for n in range(len(words), 0, -1))
+    fitting = next((p for p in prefixes if p and len(p) <= limit), "")
+    return (fitting or part[:limit]).rstrip("_-")
+
+
+def key_stem(item: Item) -> str:
+    """Return the stem of the item's proposed citekey: the export stem, shortened.
+
+    The creator part keeps at most MAX_CREATOR_LENGTH characters and the title
+    word what is left of MAX_STEM_LENGTH, each cut at a word boundary when one fits.
+    """
+    creator = _shorten(_creator_part(item), MAX_CREATOR_LENGTH, "_")
+    year = _year_part(item)
+    title = _shorten(_title_part(item), MAX_STEM_LENGTH - len(creator) - len(year) - 2, "-")
+    return f"{creator}_{title}_{year}"
 
 
 def parse_citekey_lock(text: str) -> dict[str, str]:

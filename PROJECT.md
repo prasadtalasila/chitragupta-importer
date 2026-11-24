@@ -45,7 +45,7 @@ Run the test and lint commands above. Line and branch coverage stays at
 the same command there and compare counts. Report pre-existing failures;
 do not fix them in the same diff.
 
-For a change to the key rule (`citekeys.key_stem`) or to the BibTeX
+For a change to the key rule (`citekeys.key_stem`, `citekeys.export_stem`) or to the BibTeX
 rendering (`bibtex.py`), also run the check against a real Zotero library
 and the bibliography Zotero exported from it. It is a dry run and
 writes nothing:
