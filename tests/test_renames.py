@@ -2,12 +2,15 @@
 
 import pytest
 
+from chitragupta_importer.model import Item, Library
 from chitragupta_importer.renames import (
     add_renames,
     block_rows,
     format_renames_lock,
+    merge_renames,
     parse_renames_lock,
     render_renames_block,
+    zotero_merge_renames,
 )
 
 
@@ -52,3 +55,23 @@ def test_block_text():
         "@comment{cg-renames v1\na\tc\nb\tc\n}\n"
     )
     assert render_renames_block([]) == ""
+
+
+def test_merge_rename_needs_both_items_in_the_lock():
+    lock = {"z:1": "old", "z:2": "new"}
+    assert merge_renames({"z:1": "z:2", "z:3": "z:2"}, lock) == [("old", "new")]
+
+
+def _item(item_id, replaces=()):
+    return Item(item_id, "journalArticle", {}, (), (), (), (), replaces=replaces)
+
+
+def test_zotero_merge_rename_for_a_retired_line_only():
+    library = Library((_item("z:2", replaces=("z:1", "z:3")), _item("z:3")), (), ())
+    lock = {"z:1": "old", "z:2": "new", "z:3": "k3"}
+    assert zotero_merge_renames(library, lock) == [("old", "new")]
+
+
+def test_zotero_merge_rename_needs_the_replacing_item_in_the_lock():
+    library = Library((_item("z:2", replaces=("z:1",)),), (), ())
+    assert not zotero_merge_renames(library, {"z:1": "old"})

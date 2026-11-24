@@ -13,7 +13,7 @@ cannot break names a duplicate group.
 import re
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Set
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 
@@ -33,7 +33,8 @@ class BootstrapResult:
     """The citekey lock from an existing bibliography; tuples hold sorted citekeys.
 
     The lock holds every frozen citekey; those of items without a PDF
-    (`not_included`) are dormant.
+    (`not_included`) are dormant. `successors` maps each dropped citekey to
+    the citekey frozen for its item.
     """
 
     lock: dict[str, str]
@@ -41,6 +42,7 @@ class BootstrapResult:
     ambiguous: tuple[str, ...]
     not_included: tuple[str, ...]
     dropped: tuple[str, ...] = ()
+    successors: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def matched(self) -> int:
@@ -215,8 +217,9 @@ def bootstrap(
     if problems:
         raise BootstrapRefused("bootstrap refused:\n" + "\n".join(problems))
     unmatched = tuple(sorted(m.citekey for m in matches if not m.found))
-    dropped = tuple(
-        sorted(m.citekey for i, ms in claims.items() for m in ms if m.citekey != frozen[i])
-    )
+    successors = {m.citekey: frozen[i] for i, ms in claims.items() for m in ms}
+    successors = {old: new for old, new in successors.items() if old != new}
     not_included = tuple(sorted(_not_included(frozen, items)))
-    return BootstrapResult(frozen, unmatched, (), not_included, dropped)
+    return BootstrapResult(
+        frozen, unmatched, (), not_included, tuple(sorted(successors)), successors
+    )

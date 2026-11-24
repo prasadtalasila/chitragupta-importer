@@ -50,6 +50,7 @@ def test_two_entries_for_ordinary_item_stem_frozen(tmp_path):
     result = bootstrap(bib, twins_library(tmp_path))
     assert result.lock == {ITEM_ID: "smith_twins_2024"}
     assert result.dropped == ("smith_twins_2024-1",)
+    assert result.successors == {"smith_twins_2024-1": "smith_twins_2024"}
 
 
 def test_dropped_citekey_retired_in_lock(tmp_path):

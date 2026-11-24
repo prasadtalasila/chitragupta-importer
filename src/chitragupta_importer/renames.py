@@ -8,6 +8,7 @@ bibliography's `cg-renames v1` block tells chitragupta which ones apply.
 from collections.abc import Iterable, Mapping, Sequence, Set
 
 from chitragupta_importer.citekeys import citekey_problem
+from chitragupta_importer.model import Library
 
 
 def parse_renames_lock(text: str) -> dict[str, str]:
@@ -83,3 +84,23 @@ def render_renames_block(rows: Sequence[tuple[str, str]]) -> str:
         return ""
     body = "".join(f"{old}\t{new}\n" for old, new in rows)
     return f"@comment{{cg-renames v1\n{body}}}\n"
+
+
+def merge_renames(duplicates: Mapping[str, str], lock: Mapping[str, str]) -> list[tuple[str, str]]:
+    """Renames from items merged into a survivor: merged item's key -> survivor's key."""
+    return [
+        (lock[merged], lock[kept])
+        for merged, kept in sorted(duplicates.items())
+        if merged in lock and kept in lock
+    ]
+
+
+def zotero_merge_renames(library: Library, lock: Mapping[str, str]) -> list[tuple[str, str]]:
+    """Renames from merges in Zotero: a gone item's key -> the key of the item replacing it."""
+    live = {item.item_id for item in library.items}
+    return [
+        (lock[gone], lock[item.item_id])
+        for item in library.items
+        for gone in item.replaces
+        if gone in lock and gone not in live and item.item_id in lock
+    ]
