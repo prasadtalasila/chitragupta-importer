@@ -191,7 +191,11 @@ _Avoid_: suspended, inactive
 **Dropped citekey**:
 A citekey of the existing bibliography that bootstrap did not freeze because
 another entry for the same item (a survivor, or an item merged in Zotero) was
-frozen instead.
+frozen instead. It is kept in `citekeys.lock` as a line with the pseudo item
+ID `dropped:<citekey>` and the citekey itself as the value, for example
+`dropped:smith_tides_2020-1<TAB>smith_tides_2020-1`: the lock holds one item
+ID per line and no item holds the key, and the value is what keeps the
+spelling from being given to another item.
 _Avoid_: lost key, alias
 
 **Rename**:

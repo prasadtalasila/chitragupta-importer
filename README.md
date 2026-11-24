@@ -107,6 +107,29 @@ Zotero), one citekey is frozen and the summary lists the others as
 citekey is retired in the citekey lock and never given to another item. A
 later merge in Zotero that keeps the same item keeps the frozen citekey.
 
+A bootstrap freezes citekeys only. It never copies a field from the old
+bibliography: the new `bibliography.bib` is written from Zotero's current
+data. Entries of the old bibliography that do not become a frozen citekey
+are counted, not frozen:
+
+- *unmatched*: no item matched by PDF, DOI, URL or title. Nothing is frozen
+  for the entry.
+- *not included*: the entry's item has no PDF (see the left-out counts), so
+  it gets no entry in the new bibliography and nothing is frozen.
+- *dropped*: another entry for the same item was frozen (see above).
+
+Fields can differ between the two bibliographies for these reasons: notes
+and annotations are not imported (an old `annote` has no counterpart),
+values are written as Zotero stores them (an ISBN without hyphens), and the
+item was edited in Zotero after the old bibliography was exported.
+
+A citekey is `<first creator's last name>_<first title word>_<year>`, with
+a clash suffix when needed. There is no length limit, so an institutional
+author gives a long key, such as
+`committee_on_foundational_research_gaps_and_..._2024` (97 characters;
+the middle of this one is shortened). A frozen citekey never changes, so a
+long one stays long.
+
 `--dry-run` does everything but write: it creates and changes nothing
 under `--out`, refuses whatever a real import run would refuse, and prints
 the summary a real import run would print, after a first line
@@ -117,7 +140,8 @@ The papers directory:
 ```text
 papers/
 ├── bibliography.bib      the name table, then one entry per included item
-├── citekeys.lock         item ID -> citekey; a written citekey never changes
+├── citekeys.lock         item ID -> citekey; a written citekey never changes;
+│                         a dropped citekey is `dropped:<citekey>` -> `<citekey>`
 ├── collections.lock      collection ID -> segment slug, parent and name
 └── files/
     └── <citekey>.pdf     the item's main PDF
