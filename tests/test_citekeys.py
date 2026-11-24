@@ -2,7 +2,12 @@
 
 import pytest
 
-from chitragupta_importer.citekeys import UnsafeCitekey, citekey_problem, key_stem
+from chitragupta_importer.citekeys import (
+    UnsafeCitekey,
+    citekey_problem,
+    export_stem,
+    key_stem,
+)
 from chitragupta_importer.model import Creator, Item
 
 
@@ -51,27 +56,27 @@ def test_stem_shape():
         creators=[("Köhler", "Jan", "author")],
         fields={"title": "The Calibrating of Twins", "date": "2024-02"},
     )
-    assert key_stem(it) == "kohler_calibrating_2024"
+    assert export_stem(it) == "kohler_calibrating_2024"
 
 
 def test_stem_with_nothing():
-    assert key_stem(item()) == "noauthor__nodate"
+    assert export_stem(item()) == "noauthor__nodate"
 
 
 def test_stem_takes_first_creator_whatever_its_role():
     it = item(creators=[("Ed", "A", "editor"), ("Writer", "B", "author")])
-    assert key_stem(it) == "ed__nodate"
-    assert key_stem(item(creators=[("", "Only First", "author")])) == "noauthor__nodate"
+    assert export_stem(it) == "ed__nodate"
+    assert export_stem(item(creators=[("", "Only First", "author")])) == "noauthor__nodate"
 
 
 def test_stem_uses_first_creator_of_any_role_when_no_author():
     it = item(creators=[("Mäder", "Jan", "editor"), ("Other", "X", "editor")])
-    assert key_stem(it) == "mader__nodate"
+    assert export_stem(it) == "mader__nodate"
 
 
 def test_stem_single_field_creator():
     it = item(creators=[("Microsoft Research", "", "author")])
-    assert key_stem(it).startswith("microsoft_research_")
+    assert export_stem(it).startswith("microsoft_research_")
 
 
 @pytest.mark.parametrize(
@@ -83,12 +88,12 @@ def test_stem_single_field_creator():
     ],
 )
 def test_stem_creator_spaces_become_underscores_commas_dropped(last, part):
-    assert key_stem(item(creators=[(last, "", "author")])) == f"{part}__nodate"
+    assert export_stem(item(creators=[(last, "", "author")])) == f"{part}__nodate"
 
 
 def test_stem_drops_characters_outside_a_z_0_9_hyphen():
     it = item(creators=[("microsoft/web-dev", "", "author")])
-    assert key_stem(it) == "microsoftweb-dev__nodate"
+    assert export_stem(it) == "microsoftweb-dev__nodate"
 
 
 @pytest.mark.parametrize(
@@ -112,7 +117,7 @@ def test_stem_drops_characters_outside_a_z_0_9_hyphen():
     ],
 )
 def test_stem_title_word(title, word):
-    assert key_stem(item(fields={"title": title})) == f"noauthor_{word}_nodate"
+    assert export_stem(item(fields={"title": title})) == f"noauthor_{word}_nodate"
 
 
 @pytest.mark.parametrize(
@@ -120,4 +125,27 @@ def test_stem_title_word(title, word):
     [("2024", "2024"), ("March 12, 1999", "1999"), ("12/03/99", "nodate"), ("", "nodate")],
 )
 def test_stem_year(date, year):
-    assert key_stem(item(fields={"date": date})) == f"noauthor__{year}"
+    assert export_stem(item(fields={"date": date})) == f"noauthor__{year}"
+
+
+@pytest.mark.parametrize(
+    ("last", "title", "date", "stem"),
+    [
+        ("Smith", "Digital Platforms", "2020", "smith_digital_2020"),
+        ("Ostrander", "Calibrating the Digital Twin", "2024", "ostrander_calib_2024"),
+        ("dos Santos", "Digital twins", "2022", "dos_santos_digi_2022"),
+        ("Committee on Foundational Research Gaps", "Foundational", "2024", "committee_found_2024"),
+        ("Kuruppuarachchi", "Architecture", "2022", "kuruppuara_arch_2022"),
+        ("Li", "Knowledge-orchestrated agents", "2025", "li_knowledge_2025"),
+        ("Zech", "Digital-Twins-as-a-Service", "2024", "zech_digital_2024"),
+        ("Ostrander", "Calibrating", "", "ostrander_cal_nodate"),
+    ],
+)
+def test_key_stem_is_at_most_20_characters_with_creator_at_most_10(last, title, date, stem):
+    it = item(creators=[(last, "", "author")], fields={"title": title, "date": date})
+    assert key_stem(it) == stem and len(stem) <= 20
+
+
+def test_key_stem_keeps_the_export_stem_when_it_fits():
+    it = item(creators=[("Ed", "A", "editor")])
+    assert key_stem(it) == export_stem(it) == "ed__nodate"

@@ -20,7 +20,7 @@ from types import MappingProxyType
 from bibtexparser.bparser import BibTexParser
 
 from chitragupta_importer import normalise
-from chitragupta_importer.citekeys import citekey_problem, key_stem
+from chitragupta_importer.citekeys import citekey_problem, export_stem
 from chitragupta_importer.model import Item, Library
 from chitragupta_importer.pdfs import LeftOutReason, main_pdf
 
@@ -127,7 +127,7 @@ def _match(entry: dict[str, str], directory: Path, indexes, titles: Mapping[str,
 def _frozen_citekey(claimants: list[_Match], stem: str, item_pdfs: Set[str]) -> str:
     """The one claimant whose own PDF is one of the item's, if exactly one is.
 
-    Otherwise the key rule's stem, else the smallest without a clash suffix,
+    Otherwise the export stem, else the smallest without a clash suffix,
     else the smallest.
     """
     if len(claimants) == 1:
@@ -208,7 +208,7 @@ def bootstrap(
         if len(match.found) == 1:
             claims.setdefault(next(iter(match.found)), []).append(match)
     frozen = {
-        i: _frozen_citekey(claims[i], key_stem(items[i]), _own_pdfs(items[i], survivor_pdfs))
+        i: _frozen_citekey(claims[i], export_stem(items[i]), _own_pdfs(items[i], survivor_pdfs))
         for i in sorted(claims)
     }
     problems = list(_refusals(matches, frozen))

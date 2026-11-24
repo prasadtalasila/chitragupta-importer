@@ -76,7 +76,7 @@ def test_merge_flag_merges(tmp_path):
     summary = import_zotero(build(tmp_path, with_pdf, without_pdf), out, merge_duplicates=True)
     assert summary.duplicates == {"zotero:user/AAAA1111": "zotero:user/BBBB2222"}
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/BBBB2222\tostrander_calibrating_2024\n"
+        "zotero:user/BBBB2222\tostrander_calib_2024\n"
     )
 
 

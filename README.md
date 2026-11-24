@@ -125,12 +125,15 @@ and annotations are not imported (an old `annote` has no counterpart),
 values are written as Zotero stores them (an ISBN without hyphens), and the
 item was edited in Zotero after the old bibliography was exported.
 
-A citekey is `<first creator's last name>_<first title word>_<year>`, with
-a clash suffix when needed. There is no length limit, so an institutional
-author gives a long key, such as
-`committee_on_foundational_research_gaps_and_..._2024` (97 characters;
-the middle of this one is shortened). A frozen citekey never changes, so a
-long one stays long.
+A new citekey is `<first creator's last name>_<first title word>_<year>`,
+shortened to at most 20 characters before any clash suffix: the creator
+part keeps at most 10 characters and the title word what is left, each cut
+after a whole word (`_` or `-`) when one fits and mid-word otherwise. So
+`ostrander_calibrating_2024` becomes `ostrander_calib_2024` and the
+institutional author of `committee_on_foundational_research_gaps_..._2024`
+becomes `committee_found_2024`. A clash suffix (`-1`, `-2`, ...) can take a
+key past 20 characters. A frozen citekey never changes, so a long one
+from the old bibliography stays long.
 
 `--dry-run` does everything but write: it creates and changes nothing
 under `--out`, refuses whatever a real import run would refuse, and prints

@@ -52,7 +52,7 @@ def test_zotero_command_prints_summary(tmp_path):
     result = CliRunner().invoke(main, ["zotero", "--data-dir", str(data_dir), "--out", str(out)])
     assert result.exit_code == 0, result.output
     assert row(result.stdout, "included", 1) and row(result.stdout, "new citekeys", 1)
-    assert (out / "files" / "ostrander_calibrating_2024.pdf").is_file()
+    assert (out / "files" / "ostrander_calib_2024.pdf").is_file()
 
 
 def test_zotero_command_bootstrap_option(tmp_path):

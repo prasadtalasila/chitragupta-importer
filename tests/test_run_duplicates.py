@@ -27,7 +27,7 @@ def test_duplicates_merged_before_import(tmp_path):
     assert summary.included == 1
     assert summary.duplicates == {"zotero:user/BBBB2222": "zotero:user/AAAA1111"}
     assert (out / "citekeys.lock").read_text(encoding="utf-8") == (
-        "zotero:user/AAAA1111\tostrander_calibrating_2024\n"
+        "zotero:user/AAAA1111\tostrander_calib_2024\n"
     )
     assert (out / "bibliography.bib").read_text(encoding="utf-8").count("@article{") == 1
     assert format_summary(summary) == (
