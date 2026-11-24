@@ -47,6 +47,7 @@ def test_bootstrap_with_duplicates_freezes_one_key(tmp_path):
     assert format_summary(summary).endswith(
         "bootstrap: matched 1, unmatched 0, ambiguous 0, not included 0, dropped 1\n"
         "dropped citekey: ostrander_calibrating_2024-1\n"
+        "renamed citekey: ostrander_calibrating_2024-1 -> ostrander_calibrating_2024\n"
     )
 
 

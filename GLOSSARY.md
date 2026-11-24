@@ -112,9 +112,19 @@ Linux, macOS or Windows; every citekey must be safe.
 _Avoid_: valid citekey, legal citekey
 
 **Frozen citekey**:
-A citekey that, once written, never changes spelling and never moves to a
-different item.
+A citekey that, once written, never moves to a different item. It changes
+spelling only through a citekey rename of one longer than 30 characters.
 _Avoid_: stable key, pinned key
+
+**Citekey rename**:
+A record that an old citekey's paper now has another citekey, its
+successor: a dropped citekey, the citekey of an item merged into another,
+or a citekey longer than 30 characters. Kept in `renames.lock` and written
+to the bibliography's `cg-renames` block for chitragupta.
+_Avoid_: alias, redirect
+
+**Successor**:
+The citekey that a citekey rename points to: the one the same paper has now.
 
 **Key rule**:
 The pattern a new citekey is built from, `<author>_<titleword>_<year>`

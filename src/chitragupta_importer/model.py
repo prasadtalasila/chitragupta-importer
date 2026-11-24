@@ -35,7 +35,8 @@ class Collection:
 class Item:  # pylint: disable=too-many-instance-attributes
     """One item; `fields` is keyed by the reference manager's field name.
 
-    `date_added` is when the item was added, as `YYYY-MM-DD HH:MM:SS`.
+    `date_added` is when the item was added, as `YYYY-MM-DD HH:MM:SS`;
+    `replaces` holds the item IDs of the items a merge folded into this one.
     """
 
     item_id: str
@@ -46,6 +47,7 @@ class Item:  # pylint: disable=too-many-instance-attributes
     collection_ids: tuple[str, ...]
     tags: tuple[str, ...]
     date_added: str = ""
+    replaces: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

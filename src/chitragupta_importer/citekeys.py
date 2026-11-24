@@ -25,8 +25,11 @@ _OUTSIDE_KEY_ALPHABET = re.compile(r"[^a-z0-9_-]")
 # The longest stem of a new citekey, before any clash suffix, and of its creator part.
 MAX_STEM_LENGTH = 20
 MAX_CREATOR_LENGTH = 10
-# The pseudo item ID prefix under which a dropped citekey is reserved in the lock.
+# The pseudo item ID prefixes under which a dropped or a renamed citekey is reserved.
 DROPPED_PREFIX = "dropped:"
+RENAMED_PREFIX = "renamed:"
+# A citekey longer than this is renamed to one from the key rule.
+MAX_FROZEN_LENGTH = 30
 
 
 class UnsafeCitekey(ValueError):
@@ -154,11 +157,40 @@ def assign_citekeys(
     used = set(updated.values())
     new = []
     for item_id in sorted(set(stems) - set(lock)):
-        citekey = free_spelling(stems[item_id], used)
-        problem = citekey_problem(citekey)
-        if problem is not None:
-            raise UnsafeCitekey(f"new citekey {citekey!r} for item {item_id}: {problem}")
+        citekey = _checked(free_spelling(stems[item_id], used), item_id)
         updated[item_id] = citekey
         used.add(citekey)
         new.append(item_id)
     return updated, new
+
+
+def _checked(citekey: str, item_id: str) -> str:
+    """`citekey`, or UnsafeCitekey naming `item_id` when it fails the safe-citekey rule."""
+    problem = citekey_problem(citekey)
+    if problem is not None:
+        raise UnsafeCitekey(f"new citekey {citekey!r} for item {item_id}: {problem}")
+    return citekey
+
+
+def shorten_long_citekeys(
+    stems: Mapping[str, str], lock: Mapping[str, str]
+) -> tuple[dict[str, str], list[tuple[str, str]]]:
+    """Rename each citekey longer than MAX_FROZEN_LENGTH; return the lock and the renames.
+
+    `stems` holds the key-rule stems of the included items, all in `lock`. A
+    renamed item gets a new key as `assign_citekeys` would give one, and its
+    old spelling stays reserved under `renamed:<old>`. Renames are
+    `(old, new)` pairs in item-ID order.
+    """
+    updated = dict(lock)
+    used = set(updated.values())
+    renames = []
+    for item_id in sorted(stems):
+        old = updated[item_id]
+        if len(old) > MAX_FROZEN_LENGTH:
+            new = _checked(free_spelling(stems[item_id], used), item_id)
+            updated[item_id] = new
+            updated[f"{RENAMED_PREFIX}{old}"] = old
+            used.add(new)
+            renames.append((old, new))
+    return updated, renames

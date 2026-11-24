@@ -81,9 +81,10 @@ chitragupta-importer zotero --data-dir ~/Zotero --out papers --merge-duplicates
 An import run reads the personal library only; `zotero.sqlite` is opened
 read-only and nothing is written outside `--out`. It prints a summary: a
 table of counts (included items, left-out items by reason, new citekeys,
-duplicates, the bootstrap counts and dropped citekeys, files in
-`papers/files/` it did not write), then one line per collection change,
-duplicate, dropped citekey, unreferenced file and skipped library. A
+duplicates, the bootstrap counts and dropped citekeys, citekey renames,
+files in `papers/files/` it did not write), then one line per collection
+change, duplicate, dropped citekey, citekey rename, unreferenced file and
+skipped library. A
 refused import run writes nothing, prints `Error:` and one problem per line
 to stderr and exits 1. In a terminal the output is coloured; piped or
 redirected it is plain text.
@@ -132,8 +133,23 @@ after a whole word (`_` or `-`) when one fits and mid-word otherwise. So
 `ostrander_calibrating_2024` becomes `ostrander_calib_2024` and the
 institutional author of `committee_on_foundational_research_gaps_..._2024`
 becomes `committee_found_2024`. A clash suffix (`-1`, `-2`, ...) can take a
-key past 20 characters. A frozen citekey never changes, so a long one
-from the old bibliography stays long.
+key past 20 characters.
+
+A citekey that a paper leaves behind gets a citekey rename to the key the
+paper has now, its successor: a dropped citekey, the key of an item merged
+into another (by `--merge-duplicates`, or in Zotero), and a frozen key longer
+than 30 characters, which is renamed once to a key from the key rule (its
+old spelling stays reserved). Each new rename prints
+`renamed citekey: <old> -> <successor>`. The renames are kept in
+`renames.lock` and written to a `@comment{cg-renames v1 ...}` block after the
+name table, one `<old>\t<successor>` row each, with chains followed to the
+last successor and only rows whose successor has an entry. chitragupta
+rewrites drafts citing an old key from that block. A rename leaves
+`files/<old>.pdf` in place, reported as unreferenced. A dropped citekey's
+rename is known only during a bootstrap, so a `papers/` directory
+bootstrapped before 0.3.0 gets those rows only by bootstrapping again into
+an empty directory. A `renames.lock` without a `citekeys.lock` refuses the
+run, since its rows name keys of an earlier lock.
 
 `--dry-run` does everything but write: it creates and changes nothing
 under `--out`, refuses whatever a real import run would refuse, and prints
@@ -144,10 +160,12 @@ The papers directory:
 
 ```text
 papers/
-├── bibliography.bib      the name table, then one entry per included item
-├── citekeys.lock         item ID -> citekey; a written citekey never changes;
-│                         a dropped citekey is `dropped:<citekey>` -> `<citekey>`
+├── bibliography.bib      the name table, the renames, then one entry per included item
+├── citekeys.lock         item ID -> citekey; a citekey never moves to another item;
+│                         a dropped or renamed citekey is `dropped:<citekey>` or
+│                         `renamed:<citekey>` -> `<citekey>`
 ├── collections.lock      collection ID -> segment slug, parent and name
+├── renames.lock          old citekey -> successor; written once there is a rename
 └── files/
     └── <citekey>.pdf     the item's main PDF
 ```

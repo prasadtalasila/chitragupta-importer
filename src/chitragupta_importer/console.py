@@ -28,16 +28,18 @@ def _counts(summary: RunSummary) -> Table:
         table.add_row("bootstrap: ambiguous", str(len(result.ambiguous)))
         table.add_row("bootstrap: not included", str(len(result.not_included)))
         table.add_row("dropped citekeys", str(len(result.dropped)))
+    table.add_row("citekey renames", str(len(summary.renames)))
     table.add_row("unreferenced files", str(len(summary.unreferenced)))
     return table
 
 
 def _detail_lines(summary: RunSummary) -> list[str]:
-    """One line per collection change, duplicate, dropped citekey, file and skipped library."""
+    """One line per collection change, duplicate, dropped or renamed citekey, file and library."""
     lines = list(summary.collection_changes)
     lines += [f"duplicate {i} of {summary.duplicates[i]}" for i in sorted(summary.duplicates)]
     if summary.bootstrap is not None:
         lines += [f"dropped citekey: {citekey}" for citekey in sorted(summary.bootstrap.dropped)]
+    lines += [f"renamed citekey: {old} -> {new}" for old, new in summary.renames]
     lines += [f"unreferenced file: {name}" for name in summary.unreferenced]
     lines += [f"skipped library: {library}" for library in summary.skipped_libraries]
     return lines

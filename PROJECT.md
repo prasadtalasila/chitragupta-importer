@@ -105,5 +105,9 @@ module. Add a dependency only when the task requires it.
 The importer writes only inside the output `papers/` directory and
 never writes to a reference manager's own files; `zotero.sqlite` is
 opened read-only. A citekey, once written to `papers/citekeys.lock`,
-never changes spelling and never moves to another paper. The design is
-in `docs/superpowers/specs/2026-11-13-zotero-importer-design.md`.
+never moves to another paper. It changes spelling only once, when it is
+longer than 30 characters: the old spelling stays reserved and the
+rename is recorded in `papers/renames.lock` and the bibliography's
+`cg-renames` block. The design is in
+`docs/superpowers/specs/2026-11-13-zotero-importer-design.md` and
+`docs/superpowers/specs/2026-11-24-citekey-renames-design.md`.

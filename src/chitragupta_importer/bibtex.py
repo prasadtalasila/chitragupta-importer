@@ -229,7 +229,6 @@ def render_name_table(rows: Sequence[tuple[str, str]]) -> str:
     return f"@comment{{cg-collections v1\n{body}}}\n"
 
 
-def render_bibliography(name_table: str, entries: Sequence[str]) -> str:
-    """The name table (when non-empty) then the entries, one blank line between blocks."""
-    blocks = [name_table, *entries] if name_table else list(entries)
-    return "\n".join(blocks)
+def render_bibliography(header: Sequence[str], entries: Sequence[str]) -> str:
+    """The non-empty header blocks, then the entries, one blank line between blocks."""
+    return "\n".join([*(block for block in header if block), *entries])

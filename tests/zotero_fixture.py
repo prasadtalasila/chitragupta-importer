@@ -50,6 +50,7 @@ class ZoteroFixture:
         tags=(),
         deleted=False,
         date_added="2020-01-01 00:00:00",
+        replaces=(),
     ):
         self._items.append(
             {
@@ -62,6 +63,7 @@ class ZoteroFixture:
                 "tags": tags,
                 "deleted": deleted,
                 "date_added": date_added,
+                "replaces": replaces,
             }
         )
 
@@ -135,6 +137,7 @@ class ZoteroFixture:
         for tag in item["tags"]:
             tag_id = rows.id_of(conn, "tags", "name", tag)
             conn.execute("INSERT INTO itemTags VALUES (?, ?, 0)", (item_id, tag_id))
+        _insert_replaces(conn, rows, item_id, item["replaces"])
 
     def _write_pdf(self, conn, rows, parent_id, file_name, content):
         key = rows.next_attachment_key()
@@ -175,3 +178,10 @@ def _insert_creator(conn, rows, item_id, index, creator):
     conn.execute(
         "INSERT INTO itemCreators VALUES (?, ?, ?, ?)", (item_id, creator_id, role_id, index)
     )
+
+
+def _insert_replaces(conn, rows, item_id, uris):
+    """One `dc:replaces` relation from the item to each URI, as a Zotero merge writes."""
+    for uri in uris:
+        predicate = rows.id_of(conn, "relationPredicates", "predicate", "dc:replaces")
+        conn.execute("INSERT INTO itemRelations VALUES (?, ?, ?)", (item_id, predicate, uri))

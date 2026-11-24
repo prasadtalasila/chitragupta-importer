@@ -7,6 +7,7 @@ from chitragupta_importer.citekeys import (
     assign_citekeys,
     format_citekey_lock,
     parse_citekey_lock,
+    shorten_long_citekeys,
 )
 
 
@@ -86,3 +87,30 @@ def test_parse_accepts_dropped_lines():
     lock = parse_citekey_lock(text)
     assert lock == {"dropped:a:b": "a:b", "dropped:k-1": "k-1", "zotero:user/A": "k"}
     assert format_citekey_lock(lock) == text
+
+
+LONG = "a" * 31
+
+
+def test_key_over_30_is_renamed_and_its_spelling_reserved():
+    lock, rows = shorten_long_citekeys({"z:1": "a_b_2020"}, {"z:1": LONG})
+    assert lock == {"z:1": "a_b_2020", f"renamed:{LONG}": LONG}
+    assert rows == [(LONG, "a_b_2020")]
+
+
+def test_key_of_30_stays():
+    assert not shorten_long_citekeys({"z:1": "a_b_2020"}, {"z:1": "a" * 30})[1]
+
+
+def test_dormant_long_key_is_not_renamed():
+    assert shorten_long_citekeys({}, {"z:1": LONG}) == ({"z:1": LONG}, [])
+
+
+def test_new_short_key_takes_a_clash_suffix():
+    _, rows = shorten_long_citekeys({"z:1": "a_b_2020"}, {"z:1": LONG, "z:2": "a_b_2020"})
+    assert rows == [(LONG, "a_b_2020-1")]
+
+
+def test_unsafe_new_short_key_refuses():
+    with pytest.raises(UnsafeCitekey, match="z:1"):
+        shorten_long_citekeys({"z:1": "con"}, {"z:1": LONG})

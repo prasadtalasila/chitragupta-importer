@@ -145,6 +145,7 @@ def test_format_summary_lists_every_line_in_order():
         skipped_libraries=("zotero:group-7",),
         bootstrap=BootstrapResult({"i": "k", "j": "n1"}, ("u1", "u2"), (), ("n1",), ("k-1", "k-2")),
         duplicates={"zotero:user/E": "zotero:user/D", "zotero:user/C2": "zotero:user/D"},
+        renames=(("k-1", "k"),),
     )
     assert format_summary(summary) == (
         "included: 3\n"
@@ -160,6 +161,7 @@ def test_format_summary_lists_every_line_in_order():
         "bootstrap: matched 1, unmatched 2, ambiguous 0, not included 1, dropped 2\n"
         "dropped citekey: k-1\n"
         "dropped citekey: k-2\n"
+        "renamed citekey: k-1 -> k\n"
     )
 
 
