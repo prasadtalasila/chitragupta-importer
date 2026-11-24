@@ -4,8 +4,9 @@ Zotero stores no citation key (0 of 644 items in the Zotero data) and
 builds one at export time, so 86 keys carry an export-order `-1` suffix that
 a later export can move to another paper. The importer therefore assigns
 every key itself and records it in `papers/citekeys.lock` against the
-source's item ID; a written key never changes spelling and never moves to
-another paper, even after its item is deleted. Keys drafts already cite are
+source's item ID; a written key never moves to another paper, even after
+its item is deleted. (Amended by ADR-0009: a key longer than 30 characters
+is renamed once, and the rename recorded.) Keys drafts already cite are
 frozen by a one-time bootstrap from the existing `bibliography-groups.bib`,
 matched by PDF content hash first (497 of 498 match). New keys follow the
 shape of the frozen ones, `<author>_<titleword>_<year>`, with clash suffixes

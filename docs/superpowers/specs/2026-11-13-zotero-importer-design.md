@@ -33,8 +33,10 @@ first source; Mendeley and others follow with the same output.
    citekey index `papers/citekeys.lock` and a collection index
    `papers/collections.lock`. The two locks are the importer's own
    records; chitragupta reads neither.
-3. **Citekeys are created by the importer and never change** once
-   written. The keys drafts already cite, from the existing
+3. **Citekeys are created by the importer and never move to another
+   paper** once written; one longer than 30 characters is renamed once,
+   with the rename recorded (see
+   `2026-11-24-citekey-renames-design.md`). The keys drafts already cite, from the existing
    `bibliography-groups.bib`, are frozen exactly as spelled.
 4. Include only items that have a PDF; leave out and list the rest.
 5. Running twice on an unchanged library gives byte-identical output.
@@ -156,7 +158,9 @@ paper; like every line, it is never removed.
 
 Rules, in order:
 
-1. An item ID in the lock keeps its key. Always.
+1. An item ID in the lock keeps its key, unless the key is longer than
+   30 characters: then it gets a new key from the key rule once, and the
+   old spelling stays reserved as `renamed:<old>` (citekey renames design).
 2. An item ID not in the lock gets a new key from the key rule.
 3. A key in the lock is never given to another item, even after its
    item is deleted or loses its PDF. Lines are never removed. An item

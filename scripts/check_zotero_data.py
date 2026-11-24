@@ -9,6 +9,7 @@ groups were found (not the groups) and exits nonzero. Otherwise it prints:
 
 - the bootstrap counts, dropped citekeys included;
 - the number of duplicate items and of the groups they were merged into;
+- the number of citekey renames;
 - the key-rule match rate: how many frozen citekeys, with any clash suffix
   stripped, equal the key stem the key rule gives their item;
 - per field name, how many frozen entries differ between EXISTING_BIB and the
@@ -92,6 +93,7 @@ def main(data_dir: Path, existing_bib: Path, merge: bool) -> None:
     )
     groups = len(set(summary.duplicates.values()))
     print(f"duplicates: {len(summary.duplicates)} items merged into {groups} groups")
+    print(f"citekey renames: {len(summary.renames)}")
     print(f"included {summary.included}, new citekeys {len(summary.new_citekeys)}")
     left_out = ", ".join(f"{reason} {len(ids)}" for reason, ids in summary.left_out.items())
     print(f"left out: {left_out or 'none'}")
