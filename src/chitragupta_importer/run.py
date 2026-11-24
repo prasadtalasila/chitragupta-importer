@@ -28,11 +28,10 @@ from chitragupta_importer.model import Item, Library
 from chitragupta_importer.pdfs import LeftOutReason, main_pdf
 from chitragupta_importer.renames import (
     RenameSources,
-    block_rows,
     format_renames_lock,
     parse_renames_lock,
     plan_renames,
-    render_renames_block,
+    renames_block,
 )
 from chitragupta_importer.slugs import (
     CollectionRecord,
@@ -101,7 +100,7 @@ def _render(
     citekeys: Mapping[str, str],
     records: Mapping[str, CollectionRecord],
     used: set[str],
-    renames: Mapping[str, str],
+    renames: str,
 ) -> str:
     """The bibliography: the name table, the renames, then the entries by citekey."""
     paths = slug_paths(records)
@@ -111,8 +110,7 @@ def _render(
         item_paths = sorted(paths[c] for c in item.collection_ids if c in paths)
         entries.append(render_entry(citekeys[item_id], item, item_paths))
     name_table = render_name_table(name_table_rows(records, used))
-    rows = block_rows(renames, {citekeys[item_id] for item_id in included})
-    return render_bibliography([name_table, render_renames_block(rows)], entries)
+    return render_bibliography([name_table, renames], entries)
 
 
 def _check_citekeys(included: Mapping[str, tuple[Item, Path]], lock: Mapping[str, str]) -> None:
@@ -155,6 +153,17 @@ def _write(out_dir: Path, plan: Plan) -> None:
     atomic_write(out_dir / COLLECTION_LOCK, format_collection_lock(plan.collection_lock))
 
 
+def _renames_block(
+    sources: RenameSources,
+    renames: Mapping[str, str],
+    lock: Mapping[str, str],
+    included: Mapping[str, tuple[Item, Path]],
+) -> str:
+    """The `cg-renames` block; every item still in the library holds a live citekey."""
+    live = {item.item_id for item in sources.library.items}
+    return renames_block(renames, lock, set(included), live)
+
+
 def _plan(out_dir: Path, lock: dict[str, str], sources: RenameSources) -> tuple[Plan, RunSummary]:
     """The plan and summary for the merged library, starting from the citekey `lock`."""
     included, left_out = _split(sources.library)
@@ -168,7 +177,13 @@ def _plan(out_dir: Path, lock: dict[str, str], sources: RenameSources) -> tuple[
     used = {c for item, _ in included.values() for c in item.collection_ids}
     records, changes = update_collections(collection_lock, sources.library.collections, used)
     pdfs = {pdf_destination(out_dir, f"{lock[i]}.pdf"): pdf for i, (_, pdf) in included.items()}
-    plan = Plan(pdfs, _render(included, lock, records, used, renames), lock, records, renames)
+    plan = Plan(
+        pdfs,
+        _render(included, lock, records, used, _renames_block(sources, renames, lock, included)),
+        lock,
+        records,
+        renames,
+    )
     return plan, RunSummary(
         included=len(included),
         left_out=left_out,

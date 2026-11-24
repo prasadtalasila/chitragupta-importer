@@ -31,23 +31,23 @@ def test_first_row_for_an_old_key_wins_and_self_rows_are_skipped():
 
 
 def test_chains_collapse_to_the_last_successor():
-    assert block_rows({"a": "b", "b": "c"}, {"c"}) == [("a", "c"), ("b", "c")]
+    assert block_rows({"a": "b", "b": "c"}, {"c"}, {"c"}) == [("a", "c"), ("b", "c")]
 
 
 def test_row_needs_successor_in_bibliography_and_old_key_out_of_it():
-    assert block_rows({"a": "b", "x": "y"}, {"b", "x", "y"}) == [("a", "b")]
+    assert block_rows({"a": "b", "x": "y"}, {"b", "x", "y"}, {"b", "x", "y"}) == [("a", "b")]
 
 
 def test_dormant_successor_gives_no_row():
-    assert not block_rows({"a": "b"}, set())
+    assert not block_rows({"a": "b"}, set(), {"b"})
 
 
 def test_unsafe_key_gives_no_row():
-    assert not block_rows({"con": "b", "a:b": "b"}, {"b"})
+    assert not block_rows({"con": "b", "a:b": "b"}, {"b"}, {"b"})
 
 
 def test_a_loop_gives_no_row():
-    assert not block_rows({"a": "b", "b": "a"}, {"c"})
+    assert not block_rows({"a": "b", "b": "a"}, {"c"}, {"c"})
 
 
 def test_block_text():
@@ -75,3 +75,12 @@ def test_zotero_merge_rename_for_a_retired_line_only():
 def test_zotero_merge_rename_needs_the_replacing_item_in_the_lock():
     library = Library((_item("z:2", replaces=("z:1",)),), (), ())
     assert not zotero_merge_renames(library, {"z:1": "old"})
+
+
+def test_chain_stops_at_a_live_key():
+    renames = {"x": "g", "g": "r"}
+    assert block_rows(renames, {"g", "r"}, {"g", "r"}) == [("x", "g")]
+
+
+def test_live_dormant_old_key_gives_no_row():
+    assert not block_rows({"g": "r"}, {"r"}, {"g", "r"})

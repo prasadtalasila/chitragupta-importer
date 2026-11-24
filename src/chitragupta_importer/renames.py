@@ -51,26 +51,30 @@ def add_renames(
     return updated, added
 
 
-def _last_successor(renames: Mapping[str, str], old: str) -> str | None:
-    """The end of `old`'s chain of renames, or None when the chain loops."""
+def _last_successor(renames: Mapping[str, str], old: str, live_keys: Set[str]) -> str | None:
+    """The end of `old`'s chain of renames, stopping at a live key; None when it loops."""
     seen = {old}
     key = renames[old]
-    while key in renames and key not in seen:
+    while key in renames and key not in seen and key not in live_keys:
         seen.add(key)
         key = renames[key]
     return None if key in seen else key
 
 
-def block_rows(renames: Mapping[str, str], entry_keys: Set[str]) -> list[tuple[str, str]]:
+def block_rows(
+    renames: Mapping[str, str], entry_keys: Set[str], live_keys: Set[str]
+) -> list[tuple[str, str]]:
     """The `(old, last successor)` rows chitragupta can apply, sorted by old citekey.
 
-    A row is kept when its last successor is an entry's citekey, the old
-    citekey is not, and both pass the safe-citekey rule.
+    `live_keys` are the citekeys of items still in the library, included or
+    dormant. A chain stops at the first live key, since that paper still has
+    it. A row is kept when its old citekey is not live, its last successor
+    is an entry's citekey, and both pass the safe-citekey rule.
     """
     rows = []
     for old in sorted(renames):
-        new = _last_successor(renames, old)
-        if new in entry_keys and old not in entry_keys and _safe(old) and _safe(new):
+        new = _last_successor(renames, old, live_keys)
+        if new in entry_keys and old not in live_keys and _safe(old) and _safe(new):
             rows.append((old, new))
     return rows
 
@@ -140,3 +144,11 @@ def plan_renames(
     lock, shortened = shorten_long_citekeys(stems, lock)
     renames, added = add_renames(renames, [*found, *shortened])
     return lock, renames, added
+
+
+def renames_block(
+    renames: Mapping[str, str], lock: Mapping[str, str], included: Set[str], live: Set[str]
+) -> str:
+    """The `cg-renames` block for the `included` and `live` item IDs' citekeys in `lock`."""
+    live_keys = {lock[item_id] for item_id in live if item_id in lock}
+    return render_renames_block(block_rows(renames, {lock[i] for i in included}, live_keys))
