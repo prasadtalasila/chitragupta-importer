@@ -47,11 +47,11 @@ do not fix them in the same diff.
 
 For a change to the key rule (`citekeys.key_stem`) or to the BibTeX
 rendering (`bibtex.py`), also run the check against a real Zotero library
-and the bibliography Zotero exported from it, into an empty directory
-outside the repository:
+and the bibliography Zotero exported from it. It is a dry run and
+writes nothing:
 
 ```bash
-uv run python scripts/check_zotero_data.py ~/Zotero old.bib /tmp/papers-check
+uv run python scripts/check_zotero_data.py --merge-duplicates ~/Zotero old.bib
 ```
 
 It prints aggregate numbers only: the bootstrap counts, the key-rule match
