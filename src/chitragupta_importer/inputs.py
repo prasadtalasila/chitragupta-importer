@@ -65,6 +65,15 @@ def check_bootstrap(lock_path: Path, bootstrap_from: Path | None) -> None:
         raise ImportRefused(f"{bootstrap_from}: cannot read the bibliography ({error})") from error
 
 
+def check_renames(lock_path: Path, renames_path: Path) -> None:
+    """Refuse a rename lock left without its citekey lock: its rows name keys from before."""
+    if renames_path.exists() and not lock_path.exists():
+        raise ImportRefused(
+            f"{renames_path} exists without {lock_path.name}: delete it, or the whole"
+            " papers directory, to start a new citekey lock"
+        )
+
+
 def merged_library(
     data_dir: Path, bootstrap_from: Path | None, merge: bool
 ) -> tuple[Library, dict[str, str], dict[str, set[str]]]:

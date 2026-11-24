@@ -84,6 +84,7 @@ def test_no_renames_no_block_no_file(tmp_path):
 def test_malformed_renames_lock_refuses(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
+    (out / "citekeys.lock").write_text("", encoding="utf-8")
     (out / "renames.lock").write_text("x y\n", encoding="utf-8")
     with pytest.raises(ImportRefused, match="renames.lock: malformed lock file"):
         import_zotero(build(tmp_path, OSTRANDER), out)
@@ -103,3 +104,12 @@ def test_renames_lock_is_written_before_the_citekey_lock(tmp_path, monkeypatch):
     with pytest.raises(WriteFailed):
         import_zotero(build(tmp_path, NEWER, OLDER), out, bib, merge_duplicates=True)
     assert parse_renames_lock(read(out, "renames.lock")) == {f"{LONG}-1": LONG, LONG: SHORT}
+
+
+def test_renames_lock_without_a_citekey_lock_refuses(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "renames.lock").write_text("stale\tsmith_digital_2020\n", encoding="utf-8")
+    with pytest.raises(ImportRefused, match="renames.lock exists without"):
+        import_zotero(build(tmp_path, OSTRANDER, SMITH), out)
+    assert not (out / "citekeys.lock").exists()

@@ -148,7 +148,8 @@ rewrites drafts citing an old key from that block. A rename leaves
 `files/<old>.pdf` in place, reported as unreferenced. A dropped citekey's
 rename is known only during a bootstrap, so a `papers/` directory
 bootstrapped before 0.3.0 gets those rows only by bootstrapping again into
-an empty directory.
+an empty directory. A `renames.lock` without a `citekeys.lock` refuses the
+run, since its rows name keys of an earlier lock.
 
 `--dry-run` does everything but write: it creates and changes nothing
 under `--out`, refuses whatever a real import run would refuse, and prints

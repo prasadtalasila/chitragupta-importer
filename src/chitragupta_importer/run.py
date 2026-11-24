@@ -20,6 +20,7 @@ from chitragupta_importer.inputs import (
     DuplicatesFound,
     ImportRefused,
     check_bootstrap,
+    check_renames,
     merged_library,
     read_lock,
     seed_lock,
@@ -210,6 +211,7 @@ def plan_import(
     """
     normalise.clear_hash_cache()
     check_bootstrap(out_dir / CITEKEY_LOCK, bootstrap_from)
+    check_renames(out_dir / CITEKEY_LOCK, out_dir / RENAMES_LOCK)
     library, duplicates, survivor_pdfs = merged_library(data_dir, bootstrap_from, merge)
     lock, bootstrapped = seed_lock(out_dir / CITEKEY_LOCK, library, bootstrap_from, survivor_pdfs)
     successors = {} if bootstrapped is None else bootstrapped.successors
